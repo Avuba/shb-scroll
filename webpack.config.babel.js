@@ -41,7 +41,7 @@ module.exports = {
     filename: 'Mustafas.js',
     // helps exposing library to the window object while still matching AMD /
     // commonJS / etc. requirements: https://github.com/umdjs/umd
-    library: 'mustafas',
+    library: 'Mustafas',
     libraryTarget: 'umd',
     umdNamedDefine: true
   },
