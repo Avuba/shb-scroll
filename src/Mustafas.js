@@ -28,7 +28,8 @@ let defaults = {
     boundHandlers: {},
     axis: ['x', 'y'],
     position: { x: 0, y: 0 },
-    isScrollLocked: false
+    isScrollLocked: false,
+    isAnimatedScrolling: false
   }
 };
 
@@ -70,7 +71,18 @@ export default class Mustafas {
 
 
   scrollTo(left, top, shouldAnimate) {
-    this._private.wegbier.scrollTo({x: left, y: top});
+    if (this._private.isScrollLocked) return;
+
+    if (this._private.isAnimatedScrolling) {
+      this._stopAnimatedScroll();
+    }
+
+    if (shouldAnimate) {
+      this._startAnimatedScroll(left, top);
+    }
+    else {
+      this._private.wegbier.scrollTo({x: left, y: top});
+    }
   }
 
 
@@ -140,4 +152,21 @@ export default class Mustafas {
   _updateMoveablePosition() {
     this._config.moveable.style.webkitTransform = 'translate3d(' + this._private.position.x + 'px, ' + this._private.position.y + 'px, 0px)';
   }
+
+
+  // ANIMATED SCROLLING
+
+  _startAnimatedScroll(left, top) {
+
+  }
+
+  _runAnimatedScroll() {
+
+  }
+
+  _stopAnimatedScroll() {
+
+  }
+
+
 };
