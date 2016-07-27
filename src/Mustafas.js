@@ -35,12 +35,13 @@ export default class Mustafas {
     // NOTE there should always be a config, otherwise who passes the container?
     if (config) fUtils.mergeDeep(this._config, config);
 
+    // we don't want to modify the "moveable" property of the config passed as parameter to the
+    // constructor, so we create a separate config object
     let configWegbier = fUtils.cloneDeep(defaults.config);
     // NOTE there should always be a config, otherwise who passes the container?
     if (config) fUtils.mergeDeep(configWegbier, this._config);
     configWegbier.moveable = this._calculateMoveableSize();
-
-    console.debug(configWegbier);
+    // console.debug(configWegbier);
     this._private.wegbier = new Wegbier(configWegbier);
 
     this._bindEvents();
@@ -49,6 +50,15 @@ export default class Mustafas {
 
   // PUBLIC
 
+
+  resize() {
+    let configWegbier = {
+      moveable: this._calculateMoveableSize()
+    }
+    this._private.wegbier.refresh(config);
+  }
+
+
   destroy() {
     this._unbindEvents();
     this._private.wegbier.destroy();
@@ -56,7 +66,16 @@ export default class Mustafas {
     this._config.moveable = null;
   };
 
+
   // LIFECYCLE
+
+
+  _calculateMoveableSize() {
+    return {
+      width: this._config.moveable.clientWidth,
+      height: this._config.moveable.clientHeight
+    };
+  }
 
 
   _bindEvents() {
@@ -81,15 +100,4 @@ export default class Mustafas {
     // console.log("moveable pos: (" + event.detail.x + "," + event.detail.y + ")");
     this._config.moveable.style.webkitTransform = 'translate3d(' + event.detail.x + 'px, ' + event.detail.y + 'px, 0px)';
   }
-
-
-  // MOVEABLES
-
-
-    _calculateMoveableSize() {
-      return {
-        width: this._config.moveable.clientWidth,
-        height: this._config.moveable.clientHeight
-      };
-    }
 };
