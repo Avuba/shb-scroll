@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width">
+
+  <title>Standalone scroller</title>
+  <style>
+
+    .container-title {
+      position: absolute;
+      font-family: sans-serif;
+      font-size: small;
+    }
+
+    .container {
+      position: absolute;
+      width: 250px;
+      height: 250px;
+      background: #eee;
+      overflow: hidden;
+    }
+
+    .moveable {
+      position: absolute;
+      width: 250px;
+      height: 250px;
+      background: url('pattern.jpg');
+      transform: translate3d(0px, 0px, 0px);
+      will-change: transform;
+    }
+
+    </style>
+</head>
+
+<body>
+  <script src="Mustafas.js" charset="utf-8"></script>
+
+  <!-- VERTICAL SCROLL 1 (overscroll) ###################################### -->
+
+  <style>
+    #container-1 {
+      height: 450px;
+    }
+    #moveable-1 {
+      height: 2500px;
+    }
+  </style>
+
+  <div class="container" id="container-1">
+    <div class="moveable" id="moveable-1"></div>
+  </div>
+
+  <script type="text/javascript">
+    var container1 = document.getElementById('container-1');
+    var moveable1 = document.getElementById('moveable-1');
+    let config = {
+      container: container1,
+      scrollable: moveable1,
+      axis: 'y'
+      // we could certainly also include the following
+      // overscroll: true,
+      // maxOverscroll: 300,
+      // maxOverscrollTime: 500
+    }
+    var scroll = new Mustafas(config);
+
+  </script>
+
+</body>
+
+</html>
