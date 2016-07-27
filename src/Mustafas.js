@@ -41,7 +41,7 @@ export default class Mustafas {
     // NOTE there should always be a config, otherwise who passes the container?
     if (config) fUtils.mergeDeep(configWegbier, this._config);
     configWegbier.moveable = this._calculateMoveableSize();
-    // console.debug(configWegbier);
+
     this._private.wegbier = new Wegbier(configWegbier);
 
     this._bindEvents();
@@ -97,7 +97,6 @@ export default class Mustafas {
 
 
   _onPositionChanged(event) {
-    // console.log("moveable pos: (" + event.detail.x + "," + event.detail.y + ")");
     this._config.moveable.style.webkitTransform = 'translate3d(' + event.detail.x + 'px, ' + event.detail.y + 'px, 0px)';
   }
 };
