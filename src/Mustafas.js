@@ -1,6 +1,7 @@
-// TODO will be renamed to wegbier
-import { default as TouchMaster3000 } from './TouchMaster3000.js';
+import { default as Wegbier } from '../node_modules/wegbier/dist/Wegbier.js';
 
-class Mustafas {
-  
-}
+export default class Mustafas {
+  constructor(config) {
+    // do nuthin
+  }
+};
