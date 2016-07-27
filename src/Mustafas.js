@@ -64,6 +64,16 @@ export default class Mustafas {
   }
 
 
+  getScrollPosition() {
+    return { left: this._private.position.x, top: this._private.position.y };
+  }
+
+
+  scrollTo(left, top, shouldAnimate) {
+    this._private.wegbier.scrollTo({x: left, y: top});
+  }
+
+
   // freezes the scroll on all axes, returns the resulting state of frozen-ness (boolean)
   freezeScroll(shouldFreeze) {
     let scrollLocked = shouldFreeze ? true : false;
