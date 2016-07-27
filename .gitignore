@@ -3,3 +3,4 @@ dist
 node_modules
 
 #files
+dev/dev-sink.html

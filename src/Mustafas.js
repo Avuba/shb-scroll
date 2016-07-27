@@ -17,13 +17,18 @@ let defaults = {
 
     // lock movement in one direction. relevant if more touch/scroll libraries
     // are at the same spot and only the locked element should move
-    lock: false
+    lock: false,
+
+    // maximum speed for animated scrolling, in px/frame
+    maxScrollToSpeed: 10
   },
 
   private: {
     wegbier: null,
     boundHandlers: {},
-    axis: ['x', 'y']
+    axis: ['x', 'y'],
+    position: { x: 0, y: 0 },
+    scrollLocked: false
   }
 };
 
@@ -55,7 +60,22 @@ export default class Mustafas {
     let configWegbier = {
       moveable: this._calculateMoveableSize()
     }
-    this._private.wegbier.refresh(config);
+    this._private.wegbier.refresh(configWegbier);
+  }
+
+
+  // freezes the scroll on all axes, returns the resulting state of frozen-ness (boolean)
+  freezeScroll(shouldFreeze) {
+    let scrollLocked = shouldFreeze ? true : false;
+
+    // while the scroll is locked, mustafas doesn't update its coordinates (or the DOM node).
+    // when unlocking, it uses its old coordinates to restore the wegbier's position.
+    if (this._private.scrollLocked && !scrollLocked) {
+      this._private.wegbier.scrollTo(this._private.position);
+    }
+
+    this._private.scrollLocked = scrollLocked;
+    return this._private.scrollLocked;
   }
 
 
@@ -97,6 +117,17 @@ export default class Mustafas {
 
 
   _onPositionChanged(event) {
-    this._config.moveable.style.webkitTransform = 'translate3d(' + event.detail.x + 'px, ' + event.detail.y + 'px, 0px)';
+    if (this._private.scrollLocked) return;
+    this._private.position.x = event.detail.x;
+    this._private.position.y = event.detail.y;
+    this._updateMoveablePosition();
+  }
+
+
+  // MOVEABLE MANIPULATION
+
+
+  _updateMoveablePosition() {
+    this._config.moveable.style.webkitTransform = 'translate3d(' + this._private.position.x + 'px, ' + this._private.position.y + 'px, 0px)';
   }
 };
