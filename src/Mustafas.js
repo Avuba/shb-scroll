@@ -34,7 +34,6 @@ let defaults = {
     position: { x: 0, y: 0 },
     positionLimits: { x: 0, y: 0},
     isScrollLocked: false,
-
     animatedScroll: {
       isScrolling: false,
       speed: 0,
