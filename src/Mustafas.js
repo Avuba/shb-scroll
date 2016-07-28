@@ -8,7 +8,7 @@ let defaults = {
     // setting the event listeners. is expected to be a simple DOM node
     container: null,
 
-    // TODO remove, the scrollable should be a list of items
+    // the moveable DOM node with the actual scrollable content
     moveable: null,
 
     // decide what axis to allow scrolling on, gets translated into an array by
@@ -120,17 +120,12 @@ export default class Mustafas {
   }
 
 
-  // freezes the scroll on all axes, returns the resulting state of frozen-ness (boolean)
+  // freezes the scroll on all axes
   freezeScroll(shouldFreeze) {
     if (shouldFreeze && this._private.animatedScroll.isScrolling) {
       this._stopAnimatedScroll();
     }
-
-    // while the scroll is locked, mustafas doesn't update its coordinates (or the DOM node).
-    // when unlocking, it uses its old coordinates to restore the wegbier's position.
-    if (this._private.isScrollLocked && !shouldFreeze) {
-      this._private.wegbier.scrollTo(this._private.position);
-    }
+    this._private.wegbier.freezeScroll(shouldFreeze);
 
     // shouldFreeze is treated as an optiona parameter defaulting to true
     this._private.isScrollLocked = shouldFreeze === false ? false : true;
@@ -189,7 +184,6 @@ export default class Mustafas {
 
 
   _onPositionChanged(event) {
-    if (this._private.isScrollLocked) return;
     this._private.position.x = event.detail.x;
     this._private.position.y = event.detail.y;
     this._updateMoveablePosition();
