@@ -19,8 +19,11 @@ let defaults = {
     // are at the same spot and only the locked element should move
     lock: false,
 
-    // maximum speed for animated scrolling, in px/frame
-    maxScrollToSpeed: 10
+    // speed for animated scrolling, in px/frame
+    maxScrollToSpeed: 50,
+
+    // the distance in px from the target position, at which animated scroll starts slowing down
+    scrollToSlowingDistance: 300
   },
 
   private: {
@@ -39,8 +42,11 @@ let defaults = {
         x: 0,
         y: 0
       },
+      // TODO remove if unused
       startingPos: { x: 0, y: 0 },
-      targetPos: { x: 0, y: 0 }
+      targetPos: { x: 0, y: 0 },
+      // TODO remove if unused
+      totalDistance: 0
     }
   }
 };
@@ -74,6 +80,8 @@ export default class Mustafas {
 
 
   resize() {
+    this._calculatePositionLimits();
+
     let configWegbier = {
       moveable: this._getMoveableSize()
     }
@@ -99,6 +107,21 @@ export default class Mustafas {
     else {
       this._private.wegbier.scrollTo({x: left, y: top});
     }
+  }
+
+
+  scrollBy(left, top, shouldAnimate) {
+    this._scrollTo(this._private.position.x +left, this._private.position.x +top, shouldAnimate);
+  }
+
+
+  scrollTop(shouldAnimate) {
+    this.scrollTo(this._private.position.x, 0, shouldAnimate);
+  }
+
+
+  scrollBottom(shouldAnimate) {
+    this.scrollTo(this._private.position.x, this._private.positionLimits.y, shouldAnimate);
   }
 
 
@@ -221,8 +244,13 @@ export default class Mustafas {
       animatedScroll.targetPos[xy] = validTargetPos[xy];
     });
 
+    animatedScroll.totalDistance = this._positionDistance(
+      animatedScroll.startingPos,
+      animatedScroll.targetPos
+    );
+
     animatedScroll.isScrolling = true;
-    animatedScroll.speed = 1.5; // this_config.maxScrollToSpeed;
+    animatedScroll.speed = this._config.maxScrollToSpeed;
     this._calculateScrollDirection();
 
     this._private.currentFrame = requestAnimationFrame(this._private.boundAnimatedScroll);
@@ -237,8 +265,11 @@ export default class Mustafas {
       this._private.position,
       animatedScroll.targetPos
     );
-    // console.log("distance to target: " + distancePx);
-    // if so, stop
+
+    if (distancePx < this._config.scrollToSlowingDistance) {
+      animatedScroll.speed = this._config.maxScrollToSpeed * (distancePx/this._config.scrollToSlowingDistance);
+    }
+
     if (distancePx < 1) {
         this._stopAnimatedScroll();
         this.scrollTo(
@@ -246,6 +277,7 @@ export default class Mustafas {
           animatedScroll.targetPos.y
         );
     }
+
     // move towards target
     else {
       this._forXY((xy) => {
