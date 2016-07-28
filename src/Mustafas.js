@@ -61,7 +61,7 @@ export default class Mustafas {
     let configWegbier = fUtils.cloneDeep(defaults.config);
     // NOTE there should always be a config, otherwise who passes the container?
     if (config) fUtils.mergeDeep(configWegbier, this._config);
-    configWegbier.moveable = this._calculateMoveableSize();
+    configWegbier.moveable = this._getMoveableSize();
 
     this._private.wegbier = new Wegbier(configWegbier);
 
@@ -75,7 +75,7 @@ export default class Mustafas {
 
   resize() {
     let configWegbier = {
-      moveable: this._calculateMoveableSize()
+      moveable: this._getMoveableSize()
     }
     this._private.wegbier.refresh(configWegbier);
   }
@@ -145,7 +145,7 @@ export default class Mustafas {
   }
 
 
-  _calculateMoveableSize() {
+  _getMoveableSize() {
     return {
       width: this._config.moveable.clientWidth,
       height: this._config.moveable.clientHeight
@@ -312,9 +312,10 @@ export default class Mustafas {
         result[xy] = 0;
       else if (position[xy] < this._private.positionLimits[xy])
         result[xy] = this._private.positionLimits[xy];
+      else
+        result[xy] = position[xy];
     });
 
     return result;
   }
-
 };
