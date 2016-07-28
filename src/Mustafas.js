@@ -2,6 +2,7 @@ import { default as Wegbier } from '../node_modules/wegbier/dist/Wegbier.js';
 import { default as fUtils } from './fUtils/index.js';
 import { default as utils } from './utils.js';
 
+
 let defaults = {
   config: {
     // main container for defining the boundaries of the scrollable area and
@@ -33,7 +34,6 @@ let defaults = {
     position: { x: 0, y: 0 },
     positionLimits: { x: 0, y: 0},
     isScrollLocked: false,
-
     animatedScroll: {
       isScrolling: false,
       speed: 0,
@@ -49,6 +49,7 @@ let defaults = {
     }
   }
 };
+
 
 export default class Mustafas {
   constructor(config) {
@@ -237,6 +238,7 @@ export default class Mustafas {
     this._private.currentFrame = requestAnimationFrame(this._private.boundAnimatedScroll);
   }
 
+
   _runAnimatedScroll() {
     let animatedScroll = this._private.animatedScroll;
 
@@ -268,6 +270,7 @@ export default class Mustafas {
       this._private.currentFrame = requestAnimationFrame(this._private.boundAnimatedScroll);
     }
   }
+
 
   _stopAnimatedScroll() {
     let animatedScroll = this._private.animatedScroll;
