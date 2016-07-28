@@ -20,7 +20,7 @@ let defaults = {
     lock: false,
 
     // speed for animated scrolling, in px/frame
-    maxScrollToSpeed: 50,
+    maxScrollPxPerFrame: 50,
 
     // the distance in px from the target position, at which animated scroll starts slowing down
     scrollToSlowingDistance: 300
@@ -37,13 +37,14 @@ let defaults = {
     animatedScroll: {
       isScrolling: false,
       speed: 0,
+      maxSpeed: 0,
       direction: {
         radians: 0,
         x: 0,         // component weight in x, effectively cos(radians)
         y: 0          // component weight in y, effectively sin(radians)
       },
-      startingPos: { x: 0, y: 0 },
-      targetPos: { x: 0, y: 0 },
+      startingPosition: { x: 0, y: 0 },
+      targetPosition: { x: 0, y: 0 },
       totalDistance: 0
     }
   }
@@ -57,18 +58,18 @@ export default class Mustafas {
     if (config) fUtils.mergeDeep(this._config, config);
     this._private.axis = this._config.axis.split('');
 
-    this._calculatePositionLimits();
-
+    // mustafa needs an actual DOMNode as moveable, whereas wegbier needs an area.
     // it's bad manners to modify the "moveable" property of the config passed as parameter to the
-    // constructor, so we clone a separate config object and modify that one instead
+    // constructor. so we clone a separate config object and modify that one instead
     let configWegbier = fUtils.cloneDeep(defaults.config);
     if (config) fUtils.mergeDeep(configWegbier, this._config);
     configWegbier.moveable = this._getMoveableSize();
 
     this._private.wegbier = new Wegbier(configWegbier);
 
-    this._bindEvents();
+    this._calculatePositionLimits();
     this._bindAnimatedScroll();
+    this._bindEvents();
   }
 
 
@@ -78,9 +79,7 @@ export default class Mustafas {
   resize() {
     this._calculatePositionLimits();
 
-    let configWegbier = {
-      moveable: this._getMoveableSize()
-    }
+    let configWegbier = { moveable: this._getMoveableSize() };
     this._private.wegbier.refresh(configWegbier);
   }
 
@@ -90,7 +89,7 @@ export default class Mustafas {
   }
 
 
-  scrollTo(left, top, shouldAnimate) {
+  scrollTo(left, top, shouldAnimate, scrollSpeed) {
     if (this._private.isScrollLocked) return;
 
     if (this._private.animatedScroll.isScrolling) {
@@ -98,45 +97,43 @@ export default class Mustafas {
     }
 
     if (shouldAnimate) {
-      this._startAnimatedScroll( { x: left, y: top } );
+      this._startAnimatedScroll( { x: left, y: top }, scrollSpeed );
     }
     else {
-      this._private.wegbier.scrollTo({x: left, y: top});
+      this._private.wegbier.scrollTo( { x: left, y: top } );
     }
   }
 
 
-  scrollBy(left, top, shouldAnimate) {
-    this._scrollTo(this._private.position.x +left, this._private.position.x +top, shouldAnimate);
+  scrollBy(left, top, shouldAnimate, scrollSpeed) {
+    this.scrollTo(this._private.position.x +left, this._private.position.x +top, shouldAnimate, scrollSpeed);
   }
 
 
-  scrollTop(shouldAnimate) {
-    this.scrollTo(this._private.position.x, 0, shouldAnimate);
+  scrollTop(shouldAnimate, scrollSpeed) {
+    this.scrollTo(this._private.position.x, 0, shouldAnimate, scrollSpeed);
   }
 
 
-  scrollBottom(shouldAnimate) {
-    this.scrollTo(this._private.position.x, this._private.positionLimits.y, shouldAnimate);
+  scrollBottom(shouldAnimate, scrollSpeed) {
+    this.scrollTo(this._private.position.x, this._private.positionLimits.y, shouldAnimate, scrollSpeed);
   }
 
 
   // freezes the scroll on all axes, returns the resulting state of frozen-ness (boolean)
   freezeScroll(shouldFreeze) {
-    let scrollLocked = shouldFreeze ? true : false;
-
     if (shouldFreeze && this._private.animatedScroll.isScrolling) {
       this._stopAnimatedScroll();
     }
 
     // while the scroll is locked, mustafas doesn't update its coordinates (or the DOM node).
     // when unlocking, it uses its old coordinates to restore the wegbier's position.
-    if (this._private.isScrollLocked && !scrollLocked) {
+    if (this._private.isScrollLocked && !shouldFreeze) {
       this._private.wegbier.scrollTo(this._private.position);
     }
 
-    this._private.isScrollLocked = scrollLocked;
-    return this._private.isScrollLocked;
+    // shouldFreeze is treated as an optiona parameter defaulting to true
+    this._private.isScrollLocked = shouldFreeze === false ? false : true;
   }
 
 
@@ -215,36 +212,39 @@ export default class Mustafas {
   }
 
 
-  _startAnimatedScroll(targetPos) {
+  _startAnimatedScroll(targetPosition, scrollSpeed) {
     let animatedScroll = this._private.animatedScroll;
 
     cancelAnimationFrame(this._private.currentFrame);
 
-    animatedScroll.startingPos = {
+    animatedScroll.startingPosition = {
       x: this._private.position.x,
       y: this._private.position.y
     }
 
-    animatedScroll.targetPos = {
+    animatedScroll.targetPosition = {
       x: this._private.position.x,
       y: this._private.position.y
     }
 
-    let validTargetPos = this._nearestValidPosition(targetPos);
+    let validTargetPosition = this._nearestValidPosition(targetPosition);
 
     // only set a target position for axes on which scrolling is enabled.
     // otherwise, tarhet position remains the same as current position.
     this._forXY((xy) => {
-      animatedScroll.targetPos[xy] = validTargetPos[xy];
+      animatedScroll.targetPosition[xy] = validTargetPosition[xy];
     });
 
     animatedScroll.totalDistance = this._positionDistance(
-      animatedScroll.startingPos,
-      animatedScroll.targetPos
+      animatedScroll.startingPosition,
+      animatedScroll.targetPosition
     );
 
     this._calculateScrollDirection();
-    animatedScroll.speed = this._config.maxScrollToSpeed;
+
+    animatedScroll.maxSpeed = scrollSpeed > 0 ? scrollSpeed : this._config.maxScrollPxPerFrame;
+    animatedScroll.speed = animatedScroll.maxSpeed;
+
     animatedScroll.isScrolling = true;
 
     this._private.currentFrame = requestAnimationFrame(this._private.boundAnimatedScroll);
@@ -255,20 +255,20 @@ export default class Mustafas {
 
     let distanceToTarget = this._positionDistance(
       this._private.position,
-      animatedScroll.targetPos
+      animatedScroll.targetPosition
     );
 
     // slow down when close to target
     if (distanceToTarget < this._config.scrollToSlowingDistance) {
-      animatedScroll.speed = this._config.maxScrollToSpeed * (distanceToTarget/this._config.scrollToSlowingDistance);
+      animatedScroll.speed = animatedScroll.maxSpeed * (distanceToTarget/this._config.scrollToSlowingDistance);
     }
 
     // stop when on target
-    if (distancePx < 1) {
+    if (distanceToTarget < 1) {
         this._stopAnimatedScroll();
         this.scrollTo(
-          animatedScroll.targetPos.x,
-          animatedScroll.targetPos.y
+          animatedScroll.targetPosition.x,
+          animatedScroll.targetPosition.y
         );
     }
     // otherwise move towards target
@@ -298,7 +298,7 @@ export default class Mustafas {
 
     // update the position, according to the speed component on each axis
     this._forXY((xy) => {
-      distance[xy] = animatedScroll.targetPos[xy] - animatedScroll.startingPos[xy];
+      distance[xy] = animatedScroll.targetPosition[xy] - animatedScroll.startingPosition[xy];
     });
 
     animatedScroll.direction.radians = Math.atan2(distance.y, distance.x);
