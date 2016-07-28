@@ -144,16 +144,9 @@ export default class Mustafas {
 
 
   _calculatePositionLimits() {
-    let positionLimits = {
-      x: this._config.moveable.clientWidth - this._config.container.clientWidth,
-      y: this._config.moveable.clientHeight - this._config.container.clientHeight
-    }
-
-    // only set limits for the axis we use, and on which the moveable is larger than the container
-    this._forXY((xy) => {
-      if (positionLimits[xy] > 0)
-        this._private.positionLimits[xy] = -positionLimits[xy];
-    });
+    let boundaries = this._private.wegbier.getBoundaries()
+    this._private.positionLimits.x = boundaries.x.axisEnd;
+    this._private.positionLimits.y = boundaries.y.axisEnd;
   }
 
 
