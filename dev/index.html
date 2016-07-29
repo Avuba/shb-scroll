@@ -7,7 +7,6 @@
 
   <title>Standalone scroller</title>
   <style>
-
     .container-title {
       position: absolute;
       font-family: sans-serif;
@@ -30,8 +29,7 @@
       transform: translate3d(0px, 0px, 0px);
       will-change: transform;
     }
-
-    </style>
+  </style>
 </head>
 
 <body>
@@ -55,7 +53,7 @@
   <script type="text/javascript">
     var container1 = document.getElementById('container-1');
     var moveable1 = document.getElementById('moveable-1');
-    let config = {
+    var config = {
       container: container1,
       moveable: moveable1
       // we could certainly also include the following
@@ -65,7 +63,6 @@
       // maxOverscrollTime: 500
     }
     var scroll = new Mustafas(config);
-
   </script>
 
 </body>

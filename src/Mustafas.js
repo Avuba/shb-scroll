@@ -62,7 +62,7 @@ export default class Mustafas {
     if (config) fUtils.mergeDeep(this._config, config);
     this._private.axis = this._config.axis.split('');
 
-    // mustafa needs an actual DOMNode as moveable, whereas wegbier needs an area.
+    // mustafa needs an actual DOMNode as moveable, whereas wegbier needs a virtual object
     let configWegbier = fUtils.cloneDeep(defaults.config);
     if (config) fUtils.mergeDeep(configWegbier, this._config);
     configWegbier.moveable = this._getMoveableSize();
@@ -124,12 +124,12 @@ export default class Mustafas {
 
   // freezes the scroll on all axes
   freezeScroll(shouldFreeze) {
-    // shouldFreeze is treated as an optional parameter defaulting to true
     this._private.isScrollFrozen = shouldFreeze === false ? false : true;
 
     if (this._private.isScrollFrozen && this._private.animatedScroll.isAnimatedScrolling) {
       this._stopAnimatedScroll();
     }
+
     this._private.wegbier.freezeScroll(shouldFreeze);
   }
 
