@@ -89,6 +89,7 @@ export default class Mustafas {
 
 
   scrollTo(left, top, shouldAnimate, scrollSpeed) {
+    console.log("scrollTo() " + left + "," + top);
     if (this._private.isScrollFrozen) return;
 
     if (this._private.animatedScroll.isAnimatedScrolling) {
@@ -196,6 +197,7 @@ export default class Mustafas {
 
 
   _startAnimatedScroll(targetPosition, scrollSpeed) {
+    console.log("_startAnimatedScroll " + targetPosition.x + "," + targetPosition.y);
     let animatedScroll = this._private.animatedScroll;
 
     cancelAnimationFrame(this._private.currentFrame);
