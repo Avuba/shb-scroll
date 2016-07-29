@@ -23,6 +23,9 @@ let defaults = {
     // speed for animated scrolling, in px/frame
     maxScrollPxPerFrame: 50,
 
+    // minimum speed for animated scrolling, under which animated scrolling stops
+    minScrollPxPerFrame: 0.2,
+
     // the distance in px from the target position, at which animated scroll starts slowing down
     scrollToSlowingDistance: 300
   },
@@ -200,6 +203,8 @@ export default class Mustafas {
 
     cancelAnimationFrame(this._private.currentFrame);
 
+    // SET STARTING POSITION AND VALID TARGET
+
     animatedScroll.startingPosition = {
       x: this._private.position.x,
       y: this._private.position.y
@@ -235,12 +240,12 @@ export default class Mustafas {
     animatedScroll.direction.x = Math.cos(animatedScroll.direction.radians);
     animatedScroll.direction.y = Math.sin(animatedScroll.direction.radians);
 
-    animatedScroll.maxPxPerFrame = scrollSpeed > 0 ? scrollSpeed : this._config.maxScrollPxPerFrame;
+    // SET SPEED AND START ANIMATING
 
+    animatedScroll.maxPxPerFrame = scrollSpeed > 0 ? scrollSpeed : this._config.maxScrollPxPerFrame;
     // set the current scrolling speed to the maximum speed; speed will decrease as the moveable
     // nears its target position
     animatedScroll.pxPerFrame = animatedScroll.maxPxPerFrame;
-
     animatedScroll.isAnimatedScrolling = true;
 
     this._private.currentFrame = requestAnimationFrame(this._private.boundAnimatedScroll);
@@ -257,7 +262,7 @@ export default class Mustafas {
     }
 
     // stop when on target
-    if (distanceToTarget < 1) {
+    if (distanceToTarget < 1 || animatedScroll.pxPerFrame < this._config.minScrollPxPerFrame) {
         this._stopAnimatedScroll();
         this._setWegbierPosition(animatedScroll.targetPosition);
     }
