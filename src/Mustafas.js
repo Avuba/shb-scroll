@@ -99,7 +99,7 @@ export default class Mustafas {
       this._startAnimatedScroll( { x: left, y: top }, scrollSpeed );
     }
     else {
-      this._private.wegbier.scrollTo( { x: left, y: top } );
+      this._setWegbierPosition( { x: left, y: top } );
     }
   }
 
