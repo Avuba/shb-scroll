@@ -182,7 +182,7 @@ export default class Mustafas {
   }
 
 
-  _setMoveablePosition(position) {
+  _setWegbierPosition(position) {
     this._private.wegbier.scrollTo(position);
   }
 
@@ -259,14 +259,14 @@ export default class Mustafas {
     // stop when on target
     if (distanceToTarget < 1) {
         this._stopAnimatedScroll();
-        this._setMoveablePosition(animatedScroll.targetPosition);
+        this._setWegbierPosition(animatedScroll.targetPosition);
     }
     // otherwise move towards target
     else {
       this._forXY((xy) => {
         this._private.position[xy] += animatedScroll.pxPerFrame * animatedScroll.direction[xy];
       });
-      this._setMoveablePosition(this._private.position);
+      this._setWegbierPosition(this._private.position);
 
       this._private.currentFrame = requestAnimationFrame(this._private.boundAnimatedScroll);
     }
