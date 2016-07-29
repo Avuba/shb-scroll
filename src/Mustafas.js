@@ -33,11 +33,11 @@ let defaults = {
     axis: ['x', 'y'],
     position: { x: 0, y: 0 },
     positionLimits: { x: 0, y: 0},
-    isScrollLocked: false,
+    isScrollFrozen: false,
     animatedScroll: {
-      isScrolling: false,
-      speed: 0,
-      maxSpeed: 0,
+      isAnimatedScrolling: false,
+      pxPerFrame: 0,
+      maxPxPerFrame: 0,
       direction: {
         radians: 0,
         x: 0,         // component weight in x, effectively cos(radians)
@@ -60,8 +60,6 @@ export default class Mustafas {
     this._private.axis = this._config.axis.split('');
 
     // mustafa needs an actual DOMNode as moveable, whereas wegbier needs an area.
-    // it's bad manners to modify the "moveable" property of the config passed as parameter to the
-    // constructor. so we clone a separate config object and modify that one instead
     let configWegbier = fUtils.cloneDeep(defaults.config);
     if (config) fUtils.mergeDeep(configWegbier, this._config);
     configWegbier.moveable = this._getMoveableSize();
@@ -91,9 +89,9 @@ export default class Mustafas {
 
 
   scrollTo(left, top, shouldAnimate, scrollSpeed) {
-    if (this._private.isScrollLocked) return;
+    if (this._private.isScrollFrozen) return;
 
-    if (this._private.animatedScroll.isScrolling) {
+    if (this._private.animatedScroll.isAnimatedScrolling) {
       this._stopAnimatedScroll();
     }
 
@@ -123,13 +121,13 @@ export default class Mustafas {
 
   // freezes the scroll on all axes
   freezeScroll(shouldFreeze) {
-    if (shouldFreeze && this._private.animatedScroll.isScrolling) {
+    // shouldFreeze is treated as an optional parameter defaulting to true
+    this._private.isScrollFrozen = shouldFreeze === false ? false : true;
+
+    if (this._private.isScrollFrozen && this._private.animatedScroll.isAnimatedScrolling) {
       this._stopAnimatedScroll();
     }
     this._private.wegbier.freezeScroll(shouldFreeze);
-
-    // shouldFreeze is treated as an optiona parameter defaulting to true
-    this._private.isScrollLocked = shouldFreeze === false ? false : true;
   }
 
 
@@ -145,7 +143,7 @@ export default class Mustafas {
 
 
   _calculatePositionLimits() {
-    let boundaries = this._private.wegbier.getBoundaries()
+    let boundaries = this._private.wegbier.getBoundaries();
     this._private.positionLimits.x = boundaries.x.axisEnd;
     this._private.positionLimits.y = boundaries.y.axisEnd;
   }
@@ -178,17 +176,14 @@ export default class Mustafas {
 
 
   _onPositionChanged(event) {
-    this._private.position.x = event.detail.x;
-    this._private.position.y = event.detail.y;
-    this._updateMoveablePosition();
+    this._private.position.x = event.data.x;
+    this._private.position.y = event.data.y;
+    this._config.moveable.style.webkitTransform = 'translate3d(' + this._private.position.x + 'px, ' + this._private.position.y + 'px, 0px)';
   }
 
 
-  // MOVEABLE MANIPULATION
-
-
-  _updateMoveablePosition() {
-    this._config.moveable.style.webkitTransform = 'translate3d(' + this._private.position.x + 'px, ' + this._private.position.y + 'px, 0px)';
+  _setMoveablePosition(position) {
+    this._private.wegbier.scrollTo(position);
   }
 
 
@@ -208,14 +203,14 @@ export default class Mustafas {
     animatedScroll.startingPosition = {
       x: this._private.position.x,
       y: this._private.position.y
-    }
+    };
 
     animatedScroll.targetPosition = {
       x: this._private.position.x,
       y: this._private.position.y
-    }
+    };
 
-    let validTargetPosition = this._nearestValidPosition(targetPosition);
+    let validTargetPosition = this._getNearestValidPosition(targetPosition);
 
     // only set a target position for axes on which scrolling is enabled.
     // otherwise, tarhet position remains the same as current position.
@@ -223,49 +218,55 @@ export default class Mustafas {
       animatedScroll.targetPosition[xy] = validTargetPosition[xy];
     });
 
-    animatedScroll.totalDistance = this._positionDistance(
+    animatedScroll.totalDistance = this._getPositionDistance(
       animatedScroll.startingPosition,
       animatedScroll.targetPosition
     );
 
-    this._calculateScrollDirection();
+    // CALCULATE SCROLL DIRECTION
 
-    animatedScroll.maxSpeed = scrollSpeed > 0 ? scrollSpeed : this._config.maxScrollPxPerFrame;
-    animatedScroll.speed = animatedScroll.maxSpeed;
+    let distance = { x: 0, y: 0 };
 
-    animatedScroll.isScrolling = true;
+    this._forXY((xy) => {
+      distance[xy] = animatedScroll.targetPosition[xy] - animatedScroll.startingPosition[xy];
+    });
+
+    animatedScroll.direction.radians = Math.atan2(distance.y, distance.x);
+    animatedScroll.direction.x = Math.cos(animatedScroll.direction.radians);
+    animatedScroll.direction.y = Math.sin(animatedScroll.direction.radians);
+
+    animatedScroll.maxPxPerFrame = scrollSpeed > 0 ? scrollSpeed : this._config.maxScrollPxPerFrame;
+
+    // set the current scrolling speed to the maximum speed; speed will decrease as the moveable
+    // nears its target position
+    animatedScroll.pxPerFrame = animatedScroll.maxPxPerFrame;
+
+    animatedScroll.isAnimatedScrolling = true;
 
     this._private.currentFrame = requestAnimationFrame(this._private.boundAnimatedScroll);
   }
 
 
   _runAnimatedScroll() {
-    let animatedScroll = this._private.animatedScroll;
-
-    let distanceToTarget = this._positionDistance(
-      this._private.position,
-      animatedScroll.targetPosition
-    );
+    let animatedScroll = this._private.animatedScroll,
+      distanceToTarget = this._getPositionDistance(this._private.position, animatedScroll.targetPosition);
 
     // slow down when close to target
     if (distanceToTarget < this._config.scrollToSlowingDistance) {
-      animatedScroll.speed = animatedScroll.maxSpeed * (distanceToTarget/this._config.scrollToSlowingDistance);
+      animatedScroll.pxPerFrame = animatedScroll.maxPxPerFrame * (distanceToTarget/this._config.scrollToSlowingDistance);
     }
 
     // stop when on target
     if (distanceToTarget < 1) {
         this._stopAnimatedScroll();
-        this.scrollTo(
-          animatedScroll.targetPosition.x,
-          animatedScroll.targetPosition.y
-        );
+        this._setMoveablePosition(animatedScroll.targetPosition);
     }
     // otherwise move towards target
     else {
       this._forXY((xy) => {
-        this._private.position[xy] += animatedScroll.speed * animatedScroll.direction[xy];
+        this._private.position[xy] += animatedScroll.pxPerFrame * animatedScroll.direction[xy];
       });
-      this._private.wegbier.scrollTo(this._private.position);
+      this._setMoveablePosition(this._private.position);
 
       this._private.currentFrame = requestAnimationFrame(this._private.boundAnimatedScroll);
     }
@@ -275,39 +276,23 @@ export default class Mustafas {
   _stopAnimatedScroll() {
     let animatedScroll = this._private.animatedScroll;
 
-    animatedScroll.speed = 0;
-    animatedScroll.isScrolling = false;
+    animatedScroll.pxPerFrame = 0;
+    animatedScroll.isAnimatedScrolling = false;
 
     cancelAnimationFrame(this._private.currentFrame);
-  }
-
-
-  _calculateScrollDirection() {
-    let animatedScroll = this._private.animatedScroll,
-      distance = { x: 0, y: 0 };
-
-    // update the position, according to the speed component on each axis
-    this._forXY((xy) => {
-      distance[xy] = animatedScroll.targetPosition[xy] - animatedScroll.startingPosition[xy];
-    });
-
-    animatedScroll.direction.radians = Math.atan2(distance.y, distance.x);
-
-    animatedScroll.direction.x = Math.cos(animatedScroll.direction.radians);
-    animatedScroll.direction.y = Math.sin(animatedScroll.direction.radians);
   }
 
 
   // HELPERS
 
 
-  _positionDistance(pos1, pos2) {
+  _getPositionDistance(pos1, pos2) {
     return this._distance(pos1.x, pos1.y, pos2.x, pos2.y);
   }
 
 
   _distance(x1, y1, x2, y2) {
-    return Math.sqrt( (x2-=x1)*x2 + (y2-=y1)*y2 );
+    return Math.sqrt( (x2 -= x1)*x2 + (y2 -= y1)*y2 );
   }
 
 
@@ -316,16 +301,19 @@ export default class Mustafas {
   }
 
 
-  _nearestValidPosition(position) {
+  _getNearestValidPosition(position) {
     let result = { x: 0, y: 0 };
 
     this._forXY((xy) => {
-      if (position[xy] > 0)
+      if (position[xy] > 0) {
         result[xy] = 0;
-      else if (position[xy] < this._private.positionLimits[xy])
+      }
+      else if (position[xy] < this._private.positionLimits[xy]) {
         result[xy] = this._private.positionLimits[xy];
-      else
+      }
+      else {
         result[xy] = position[xy];
+      }
     });
 
     return result;
