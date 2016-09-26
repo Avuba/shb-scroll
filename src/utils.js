@@ -38,4 +38,41 @@ _export.easeLinear = function(t, b, c, d) {
 };
 
 
+/**
+ * adds the EventTarget interface to an object
+ */
+_export.addEventTargetInterface = function(target) {
+  target.listeners = {};
+
+  target.addEventListener = (type, callback) => {
+    if (!(type in target.listeners)) {
+      target.listeners[type] = [];
+    }
+    target.listeners[type].push(callback);
+  };
+
+  target.removeEventListener = (type, callback) => {
+    if (!(type in target.listeners)) return;
+
+    let stack = target.listeners[type];
+    for (let i = 0, l = stack.length; i < l; i++) {
+      if (stack[i] === callback) {
+        stack.splice(i, 1);
+        return target.removeEventListener(type, callback);
+      }
+    }
+  };
+
+  target.dispatchEvent = (event, data) => {
+    if (!(event.type in target.listeners)) return;
+    if (data) event.data = data;
+
+    let stack = target.listeners[event.type];
+    for (let i = 0, l = stack.length; i < l; i++) {
+      stack[i].call(target, event);
+    }
+  };
+};
+
+
 export default _export;

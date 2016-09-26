@@ -1,6 +1,7 @@
-import { default as Wegbier } from '../node_modules/wegbier/dist/Wegbier.js';
+import { default as Kotti } from '../node_modules/kotti/dist/Kotti.js';
 import { default as fUtils } from './fUtils/index.js';
 import { default as utils } from './utils.js';
+import { default as Bounce } from './Bounce.js';
 
 
 let defaults = {
@@ -20,18 +21,59 @@ let defaults = {
     // are at the same spot and only the locked element should move
     lock: false,
 
+    // allow scrolling beyond the edge of moveable
+    overscroll: true,
+
     // speed for animated scrolling, in px/frame
     maxScrollPxPerFrame: 50,
 
     // minimum speed for animated scrolling, under which animated scrolling stops
     minScrollPxPerFrame: 0.2,
 
-    // the distance in px from the target position, at which animated scroll starts slowing down
-    scrollToSlowingDistance: 300
+    // how much time (in msec) it takes to bounce back
+    bounceTime: 500,
+
+    // how much time (in msec) it takes to animate-scroll
+    scrollTime: 500
   },
 
   private: {
-    wegbier: null,
+    container: {
+      height: 0,
+      width: 0
+    },
+    // a single abstract moveable is used to represent the combined collection of slides
+    moveable: {
+      height: 0,
+      width: 0,
+      x: 0,
+      y: 0
+    },
+    boundaries: {
+      x: {
+        axisStart: 0,
+        axisEnd: 0
+      },
+      y: {
+        axisStart: 0,
+        axisEnd: 0
+      }
+    },
+    overscroll: {
+      x: {
+        isAxisStart: false,
+        isAxisEnd: false,
+        px: 0
+      },
+      y: {
+        isAxisStart: false,
+        isAxisEnd: false,
+        px: 0
+      }
+    },
+    isBouncingOnAxis: { x: false, y: false },
+    axis: ['x']
+    /*
     boundHandlers: {},
     axis: ['x', 'y'],
     position: { x: 0, y: 0 },
@@ -50,7 +92,18 @@ let defaults = {
       targetPosition: { x: 0, y: 0 },
       totalDistance: 0
     }
+    */
+  },
+
+  state: {
+    isTouchActive: false
   }
+};
+
+
+let events = {
+  positionChanged: 'mustafas:positionChanged',
+  positionStable: 'mustafas:positionStable'
 };
 
 
@@ -58,19 +111,18 @@ export default class Mustafas {
   constructor(config) {
     this._config = fUtils.cloneDeep(defaults.config);
     this._private = fUtils.cloneDeep(defaults.private);
+    this._state = fUtils.cloneDeep(defaults.state);
 
     if (config) fUtils.mergeDeep(this._config, config);
     this._private.axis = this._config.axis.split('');
 
-    // mustafa needs an actual DOMNode as moveable, whereas wegbier needs an area.
-    let configWegbier = fUtils.cloneDeep(defaults.config);
-    if (config) fUtils.mergeDeep(configWegbier, this._config);
-    configWegbier.moveable = this._getMoveableSize();
+    this.kotti = new Kotti(this._config);
+    this.bounce = new Bounce(this._config);
 
-    this._private.wegbier = new Wegbier(configWegbier);
+    this.events = events;
+    utils.addEventTargetInterface(this);
 
-    this._calculatePositionLimits();
-    this._bindAnimatedScroll();
+    this._calculateParams();
     this._bindEvents();
   }
 
@@ -78,11 +130,10 @@ export default class Mustafas {
   // PUBLIC
 
 
-  resize() {
-    this._calculatePositionLimits();
+  refresh(config) {
+    if (config) fUtils.mergeDeep(this._config, config);
 
-    let configWegbier = { moveable: this._getMoveableSize() };
-    this._private.wegbier.refresh(configWegbier);
+    this._calculateParams();
   }
 
 
@@ -136,7 +187,8 @@ export default class Mustafas {
 
   destroy() {
     this._unbindEvents();
-    this._private.wegbier.destroy();
+    this.kotti.destroy();
+
     this._config.container = null;
     this._config.moveable = null;
   };
@@ -145,37 +197,134 @@ export default class Mustafas {
   // LIFECYCLE
 
 
-  _calculatePositionLimits() {
-    let boundaries = this._private.wegbier.getBoundaries();
-    this._private.positionLimits.x = boundaries.x.axisEnd;
-    this._private.positionLimits.y = boundaries.y.axisEnd;
-  }
+  _calculateParams() {
+    this._private.container.width = this._config.container.clientWidth;
+    this._private.container.height = this._config.container.clientHeight;
 
+    this._private.moveable.width = this._config.container.clientWidth;
+    this._private.moveable.height = this._config.container.clientHeight;
 
-  _getMoveableSize() {
-    return {
-      width: this._config.moveable.clientWidth,
-      height: this._config.moveable.clientHeight
-    };
+    // calculate the maximum and minimum coordinates for scrolling. these are used as boundaries for
+    // determining overscroll status, initiating bounce (if allowed); and also to determine bounce
+    // target position when overscrolling
+    this._forXY((xy) => {
+      let dimension = xy === 'x' ? 'width' : 'height';
+      this._private.boundaries[xy].axisStart = 0;
+      this._private.boundaries[xy].axisEnd = this._private.container[dimension] - this._private.moveable[dimension];
+    });
   }
 
 
   _bindEvents() {
-    this._private.boundHandlers = {
-      'wegbier:positionChanged': this._onPositionChanged.bind(this)
+    this._private.boundHandlersKotti = {
+      touchStart: this._handleTouchStart.bind(this),
+      touchEnd: this._handleTouchEnd.bind(this),
+      pushBy: this._handlePushBy.bind(this),
+      finishedTouchWithMomentum: this._handleMomentum.bind(this)
     };
 
-    fUtils.forEach(this._private.boundHandlers, (handler, event) => {
-      this._private.wegbier.addEventListener(event, handler);
+    fUtils.forEach(this._private.boundHandlersKotti, (handler, eventType) => {
+      this.kotti.addEventListener(this.kotti.events[eventType], handler);
+    });
+
+    this._private.boundHandlersBounce = {
+      bounceStartOnAxis: this._handleBounceStartOnAxis.bind(this),
+      bounceEndOnAxis: this._handleBounceEndOnAxis.bind(this),
+      bounceToPosition: this._handleBounceToPosition.bind(this)
+    };
+
+    fUtils.forEach(this._private.boundHandlersBounce, (handler, eventType) => {
+      this.bounce.addEventListener(this.bounce.events[eventType], handler);
     });
   }
 
 
   _unbindEvents() {
-    fUtils.forEach(this._private.boundHandlers, (handler, event) => {
-      this._private.wegbier.removeEventListener(event, handler);
+    fUtils.forEach(this._private.boundHandlersKotti, (handler, eventType) => {
+      this.kotti.removeEventListener(this.kotti.events[eventType], handler);
+    });
+
+    fUtils.forEach(this._private.boundHandlersBounce, (handler, eventType) => {
+      this.bounce.removeEventListener(this.bounce.events[eventType], handler);
     });
   }
+
+
+  // EVENT HANDLERS
+
+
+  _handleTouchStart() {
+    this._state.isTouchActive = true;
+    if (this._private.isBouncingOnAxis.x || this._private.isBouncingOnAxis.y) {
+      this.bounce.stop();
+    }
+    // TODO stop momentum too
+    if (this._private.isMomentumOnAxis.x || this._private.isMomentumOnAxis.y) {
+      this.momentum.stop();
+    }
+  }
+
+
+  _handleTouchEnd() {
+    this._state.isTouchActive = false;
+    this._checkForBounceStart();
+  }
+
+
+  _handlePushBy(event) {
+    let pushBy = event.data,
+      newCoordinates = {
+        x: this._private.moveable.x,
+        y: this._private.moveable.y
+      },
+      boundaries = this._private.boundaries;
+
+    this._forXY((xy) => {
+      let pxToAdd = pushBy[xy].px * pushBy[xy].direction;
+
+      newCoordinates[xy] = this._private.moveable[xy] + pxToAdd;
+
+      // OVERSCROLLING IS ALLOWED
+
+      // the further you overscroll, the smaller is the displacement; we multiply the displacement
+      // by a linear factor of the overscroll distance
+      if (this._config.overscroll) {
+        // check on axis start (left or top)
+        if (pushBy[xy].direction > 0 && this._private.moveable[xy] > boundaries[xy].axisStart) {
+          pxToAdd *= utils.easeLinear(Math.abs(this._private.moveable[xy]), 1, -1, this._config.maxTouchOverscroll);
+        }
+        // check on axis end (right or bottom)
+        else if (pushBy[xy].direction < 0 && this._private.moveable[xy] < boundaries[xy].axisEnd) {
+          let rightBottom = boundaries[xy].axisEnd - this._private.moveable[xy];
+          pxToAdd *= utils.easeLinear(Math.abs(rightBottom), 1, -1, this._config.maxTouchOverscroll);
+        }
+
+        newCoordinates[xy] = this._private.moveable[xy] + pxToAdd;
+      }
+
+      // OVERSCROLLING IS NOT ALLOWED
+
+      else {
+        // check on axis start (left or top)
+        if (newCoordinates[xy] > boundaries[xy].axisStart)
+          newCoordinates[xy] = boundaries[xy].axisStart;
+        // check on axis end (right or bottom)
+        else if (newCoordinates[xy] < boundaries[xy].axisEnd)
+          newCoordinates[xy] = boundaries[xy].axisEnd;
+      }
+    });
+
+    this._updateCoords(newCoordinates);
+  }
+
+
+  _handleMomentum(event) {
+    let momentum = event.data;
+    console.log("_handleMomentum: nuthin' John Snu");
+  }
+
+
+  // OLD OLD OLD
 
 
   _onPositionChanged(event) {
