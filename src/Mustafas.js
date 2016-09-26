@@ -124,6 +124,8 @@ export default class Mustafas {
 
     this._calculateParams();
     this._bindEvents();
+
+    this._private.boundUpdateElementPositions = this._updateElementPositions.bind(this);
   }
 
 
@@ -173,15 +175,15 @@ export default class Mustafas {
   }
 
 
-  // freezes the scroll on all axes
   freezeScroll(shouldFreeze) {
-    // shouldFreeze is treated as an optional parameter defaulting to true
-    this._private.isScrollFrozen = shouldFreeze === false ? false : true;
+    this.kotti.setEnabled(!shouldFreeze);
 
-    if (this._private.isScrollFrozen && this._private.animatedScroll.isAnimatedScrolling) {
-      this._stopAnimatedScroll();
-    }
-    this._private.wegbier.freezeScroll(shouldFreeze);
+    // TODO stop momentum and/or animated scroll
+  }
+
+
+  getBoundaries() {
+    return fUtils.cloneDeep(this._private.boundaries);
   }
 
 
@@ -195,24 +197,6 @@ export default class Mustafas {
 
 
   // LIFECYCLE
-
-
-  _calculateParams() {
-    this._private.container.width = this._config.container.clientWidth;
-    this._private.container.height = this._config.container.clientHeight;
-
-    this._private.moveable.width = this._config.container.clientWidth;
-    this._private.moveable.height = this._config.container.clientHeight;
-
-    // calculate the maximum and minimum coordinates for scrolling. these are used as boundaries for
-    // determining overscroll status, initiating bounce (if allowed); and also to determine bounce
-    // target position when overscrolling
-    this._forXY((xy) => {
-      let dimension = xy === 'x' ? 'width' : 'height';
-      this._private.boundaries[xy].axisStart = 0;
-      this._private.boundaries[xy].axisEnd = this._private.container[dimension] - this._private.moveable[dimension];
-    });
-  }
 
 
   _bindEvents() {
@@ -324,9 +308,86 @@ export default class Mustafas {
   }
 
 
+  // POSITION AND MOVEMENT
+
+
+  _calculateParams() {
+    this._private.container.width = this._config.container.clientWidth;
+    this._private.container.height = this._config.container.clientHeight;
+
+    this._private.moveable.width = this._config.container.clientWidth;
+    this._private.moveable.height = this._config.container.clientHeight;
+
+    // calculate the maximum and minimum coordinates for scrolling. these are used as boundaries for
+    // determining overscroll status, initiating bounce (if allowed); and also to determine bounce
+    // target position when overscrolling
+    this._forXY((xy) => {
+      let dimension = xy === 'x' ? 'width' : 'height';
+      this._private.boundaries[xy].axisStart = 0;
+      this._private.boundaries[xy].axisEnd = this._private.container[dimension] - this._private.moveable[dimension];
+    });
+  }
+
+
+  _updateCoords(newCoordinates) {
+    this._forXY((xy) => {
+
+      // DEAL WITH OVERSCROLLING
+
+      if (this._config.overscroll) {
+        let overscroll = this._private.overscroll,
+          boundaries = this._private.boundaries;
+
+        // reset
+        overscroll[xy].isAxisStart = overscroll[xy].isAxisEnd = false;
+
+        // check on axis start (left or top)
+        if (newCoordinates[xy] > boundaries[xy].axisStart) {
+          overscroll[xy].isAxisStart = true;
+          overscroll[xy].px = newCoordinates[xy] - boundaries[xy].axisStart;
+        }
+        // check on axis end (right or bottom)
+        else if (newCoordinates[xy] < boundaries[xy].axisEnd) {
+          overscroll[xy].isAxisEnd = true;
+          overscroll[xy].px = boundaries[xy].axisEnd - newCoordinates[xy];
+        }
+      }
+    });
+
+    // APPLY NEW COORDINATES AND DISPATCH EVENT
+
+    if (this._private.moveable.x !== newCoordinates.x || this._private.moveable.y !== newCoordinates.y) {
+      this._private.moveable.x = newCoordinates.x;
+      this._private.moveable.y = newCoordinates.y;
+      requestAnimationFrame(this._private.boundUpdateElementPositions);
+
+      this.dispatchEvent(new Event(events.positionChanged), {
+        position: {
+          x: this._private.moveable.x,
+          y: this._private.moveable.y
+        },
+        percent: {
+          x: this._private.moveable.x / (this._private.moveable.width - this._private.container.width),
+          y: this._private.moveable.y / (this._private.moveable.height - this._private.container.height)
+        }
+      });
+    }
+  }
+
+
+  // DOM MANIPULATION
+
+
+  _updateElementPositions() {
+    this._config.moveable.style.webkitTransform = `translate3d(
+        ${this._private.moveable.x}px, ${this._private.moveable.y}px, 0px)`;
+  }
+
+
   // OLD OLD OLD
 
 
+  /*
   _onPositionChanged(event) {
     this._private.position.x = event.data.x;
     this._private.position.y = event.data.y;
@@ -435,6 +496,7 @@ export default class Mustafas {
 
     cancelAnimationFrame(this._private.currentFrame);
   }
+  */
 
 
   // HELPERS
