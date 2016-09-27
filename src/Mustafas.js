@@ -1,6 +1,7 @@
 import { default as Kotti } from '../node_modules/kotti/dist/Kotti.js';
 import { default as fUtils } from './fUtils/index.js';
 import { default as utils } from './utils.js';
+import { default as Momentum } from './Momentum.js';
 import { default as Bounce } from './Bounce.js';
 
 
@@ -74,9 +75,10 @@ let defaults = {
         px: 0
       }
     },
+    axis: ['x', 'y'],
     isBouncingOnAxis: { x: false, y: false },
     isMomentumOnAxis: { x: false, y: false },
-    axis: ['x', 'y']
+    isTouchActive: false
     /*
     boundHandlers: {},
     axis: ['x', 'y'],
@@ -97,10 +99,6 @@ let defaults = {
       totalDistance: 0
     }
     */
-  },
-
-  state: {
-    isTouchActive: false
   }
 };
 
@@ -115,13 +113,13 @@ export default class Mustafas {
   constructor(config) {
     this._config = fUtils.cloneDeep(defaults.config);
     this._private = fUtils.cloneDeep(defaults.private);
-    this._state = fUtils.cloneDeep(defaults.state);
 
     if (config) fUtils.mergeDeep(this._config, config);
     this._private.axis = this._config.axis.split('');
 
     this.kotti = new Kotti(this._config);
     this.bounce = new Bounce(this._config);
+    this.momentum = new Momentum(this._config);
 
     this.events = events;
     utils.addEventTargetInterface(this);
@@ -224,6 +222,16 @@ export default class Mustafas {
     fUtils.forEach(this._private.boundHandlersBounce, (handler, eventType) => {
       this.bounce.addEventListener(this.bounce.events[eventType], handler);
     });
+
+    this._private.boundHandlersMomentum = {
+      pushBy: this._handleMomentumPushBy.bind(this),
+      startOnAxis: this._handleMomentumStartOnAxis.bind(this),
+      stopOnAxis: this._handleMomentumStopOnAxis.bind(this)
+    };
+
+    fUtils.forEach(this._private.boundHandlersMomentum, (handler, eventType) => {
+      this.momentum.addEventListener(this.momentum.events[eventType], handler);
+    });
   }
 
 
@@ -242,7 +250,7 @@ export default class Mustafas {
 
 
   _handleTouchStart() {
-    this._state.isTouchActive = true;
+    this._private.isTouchActive = true;
     if (this._private.isBouncingOnAxis.x || this._private.isBouncingOnAxis.y) {
       this.bounce.stop();
     }
@@ -254,7 +262,7 @@ export default class Mustafas {
 
 
   _handleTouchEnd() {
-    this._state.isTouchActive = false;
+    this._private.isTouchActive = false;
     this._checkForBounceStart();
   }
 
@@ -272,6 +280,21 @@ export default class Mustafas {
 
   _handleBounceToPosition(event) {
     this._updateCoords(event.data);
+  }
+
+
+  _handleMomentumStartOnAxis(event) {
+    this._private.isMomentumOnAxis[event.data.axis] = true;
+  }
+
+
+  _handleMomentumStopOnAxis(event) {
+    this._private.isMomentumOnAxis[event.data.axis] = false;
+  }
+
+
+  _handleMomentumPushBy(event) {
+    this._handlePushBy(event);
   }
 
 
@@ -419,7 +442,7 @@ export default class Mustafas {
 
   _checkForBounceStartOnAxis(axis) {
     // TODO single-line
-    if (this._state.isTouchActive
+    if (this._private.isTouchActive
         || this._private.isBouncingOnAxis[axis]
         || this._private.isMomentumOnAxis[axis]) return;
 
@@ -433,7 +456,7 @@ export default class Mustafas {
 
 
   _checkForPositionStable() {
-    if (!this._state.isTouchActive
+    if (!this._private.isTouchActive
         && !this._private.isBouncingOnAxis.x
         && !this._private.isBouncingOnAxis.y) {
       this.dispatchEvent(new Event(events.positionStable), {
