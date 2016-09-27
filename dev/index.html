@@ -40,11 +40,8 @@
   <!-- VERTICAL SCROLL 1 (overscroll) ###################################### -->
 
   <style>
-    #container-1 {
-      height: 450px;
-    }
     #moveable-1 {
-      height: 2500px;
+      width: 2500px;
     }
   </style>
 
@@ -57,7 +54,8 @@
     var moveable1 = document.getElementById('moveable-1');
     let config = {
       container: container1,
-      moveable: moveable1
+      moveable: moveable1,
+      axis: 'x'
       // we could certainly also include the following
       // axis: 'x',
       // overscroll: true,

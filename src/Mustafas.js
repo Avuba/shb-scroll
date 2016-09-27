@@ -206,7 +206,7 @@ export default class Mustafas {
       touchStart: this._handleTouchStart.bind(this),
       touchEnd: this._handleTouchEnd.bind(this),
       pushBy: this._handlePushBy.bind(this),
-      finishedTouchWithMomentum: this._handleMomentum.bind(this)
+      finishedTouchWithMomentum: this._handleTouchMomentum.bind(this)
     };
 
     fUtils.forEach(this._private.boundHandlersKotti, (handler, eventType) => {
@@ -243,6 +243,10 @@ export default class Mustafas {
     fUtils.forEach(this._private.boundHandlersBounce, (handler, eventType) => {
       this.bounce.removeEventListener(this.bounce.events[eventType], handler);
     });
+
+    fUtils.forEach(this._private.boundHandlersMomentum, (handler, eventType) => {
+      this.momentum.removeEventListener(this.momentum.events[eventType], handler);
+    });
   }
 
 
@@ -256,7 +260,7 @@ export default class Mustafas {
     }
     // TODO stop momentum too
     if (this._private.isMomentumOnAxis.x || this._private.isMomentumOnAxis.y) {
-      this.momentum.stop();
+      this.momentum.stopMomentum();
     }
   }
 
@@ -290,6 +294,7 @@ export default class Mustafas {
 
   _handleMomentumStopOnAxis(event) {
     this._private.isMomentumOnAxis[event.data.axis] = false;
+    this._checkForBounceStartOnAxis(event.data.axis);
   }
 
 
@@ -307,7 +312,8 @@ export default class Mustafas {
       boundaries = this._private.boundaries;
 
     this._forXY((xy) => {
-      let pxToAdd = pushBy[xy].px * pushBy[xy].direction;
+      let pxToAdd = pushBy[xy].px * pushBy[xy].direction,
+        stopMomentum = false;
 
       newCoordinates[xy] = this._private.moveable[xy] + pxToAdd;
 
@@ -333,21 +339,26 @@ export default class Mustafas {
 
       else {
         // check on axis start (left or top)
-        if (newCoordinates[xy] > boundaries[xy].axisStart)
+        if (newCoordinates[xy] > boundaries[xy].axisStart) {
           newCoordinates[xy] = boundaries[xy].axisStart;
+          stopMomentum = true;
+        }
         // check on axis end (right or bottom)
-        else if (newCoordinates[xy] < boundaries[xy].axisEnd)
+        else if (newCoordinates[xy] < boundaries[xy].axisEnd) {
           newCoordinates[xy] = boundaries[xy].axisEnd;
+          stopMomentum = true;
+        }
       }
+
+      if (stopMomentum) this.momentum.stopMomentumOnAxis(xy);
     });
 
     this._updateCoords(newCoordinates);
   }
 
 
-  _handleMomentum(event) {
-    let momentum = event.data;
-    console.log("_handleMomentum: nuthin' John Snu");
+  _handleTouchMomentum(event) {
+    this.momentum.startMomentum(event.data);
   }
 
 
@@ -370,7 +381,6 @@ export default class Mustafas {
       this._private.boundaries[xy].axisEnd = this._private.container[dimension] - this._private.moveable[dimension];
       // moveable is smaller than container on this axis, the only "stable" position is 0
       if (this._private.boundaries[xy].axisEnd > 0) this._private.boundaries[xy].axisEnd = 0;
-      console.log("axisEnd " + xy, this._private.boundaries[xy].axisEnd, this._private.container, this._private.moveable);
     });
   }
 
