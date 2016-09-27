@@ -43,8 +43,11 @@ let defaults = {
     // minimum speed for scrolling, under which animated scrolling stops
     minPxPerFrame: 0.2,
 
+    // minimum overscroll push, under which momentum is stopped
+    minMomentumPush: 1.0,
+
     // minimum overscroll push multiplier, under which momentum is stopped
-    minPushMultiplier: 0.1
+    minMomentumMultiplier: 0.15
   },
 
   private: {
@@ -295,7 +298,6 @@ export default class Mustafas {
 
 
   _handleMomentumStop(event) {
-    console.log("ZAMN");
     this._checkForPositionStable();
   }
 
@@ -332,8 +334,9 @@ export default class Mustafas {
           pxToAdd *= multiplier;
 
           // todo remove literal value
-          if (multiplier < this._config.minPushMultiplier && this._private.isMomentumOnAxis[xy]) {
-            console.log("px to add too small, stopping momentum", pxToAdd.toFixed(2));
+          if (this._private.isMomentumOnAxis[xy]
+            && (multiplier < this._config.minMomentumMultiplier || Math.abs(pxToAdd) < this._config.minMomentumPush)) {
+            console.log("px/mult too small", pxToAdd.toFixed(2), multiplier.toFixed(2));
             this.momentum.stopMomentumOnAxis(xy);
           }
         }
@@ -492,11 +495,6 @@ export default class Mustafas {
           y: this._private.moveable.y / (this._private.moveable.height - this._private.container.height)
         }
       });
-    }
-    else {
-      console.log("touch", this._private.isTouchActive);
-      console.log("bounce", this._private.isBouncingOnAxis.x, this._private.isBouncingOnAxis.y);
-      console.log("mom", this._private.isMomentumOnAxis.x, this._private.isMomentumOnAxis.y);
     }
   }
 
