@@ -28,17 +28,20 @@ let defaults = {
     // maximum amount of pixels for touch-led overscrolling
     maxTouchOverscroll: 150,
 
+    // maximum amount of pixels for momentum-led overscrolling
+    maxMomentumOverscroll: 100,
+
     // how much time (in msec) it takes to bounce back
     bounceTime: 500,
 
     // how much time (in msec) it takes to animate-scroll
     scrollTime: 500,
 
-    // speed for animated scrolling, in px/frame
-    maxScrollPxPerFrame: 50,
+    // maximum speed for scrolling, in px/frame
+    maxPxPerFrame: 50,
 
-    // minimum speed for animated scrolling, under which animated scrolling stops
-    minScrollPxPerFrame: 0.2
+    // minimum speed for scrolling, under which animated scrolling stops
+    minPxPerFrame: 0.2
   },
 
   private: {
@@ -224,7 +227,7 @@ export default class Mustafas {
     });
 
     this._private.boundHandlersMomentum = {
-      pushBy: this._handleMomentumPushBy.bind(this),
+      pushBy: this._handlePushBy.bind(this),
       startOnAxis: this._handleMomentumStartOnAxis.bind(this),
       stopOnAxis: this._handleMomentumStopOnAxis.bind(this)
     };
@@ -298,8 +301,36 @@ export default class Mustafas {
   }
 
 
+  // TODO remove
   _handleMomentumPushBy(event) {
-    this._handlePushBy(event);
+    if (!this._config.overscroll) {
+      this._handlePushBy(event);
+      return;
+    }
+
+    let pushBy = {};
+
+    this._forXY((xy) => {
+      pushBy[xy] = {
+        direction: event.data[xy].direction,
+        px: event.data[xy].px
+      };
+
+      if (this._private.overscroll[xy].px > 0) {
+        let multiplier = utils.easeLinear(this._private.overscroll[xy].px, 1, -1, this._config.maxMomentumOverscroll);
+        pushBy[xy].px *= multiplier;
+        console.log("over, mult " + xy, this._private.overscroll[xy].px, multiplier);
+
+        if (pushBy[xy].px < this._config.minScrollPxPerFrame) {
+          pushBy[xy].px = 0;
+          console.log("pix too small on " + xy);
+          this.momentum.stopMomentumOnAxis(xy);
+        }
+      }
+    });
+
+    this._handlePushBy({ data: pushBy });
+    //this._handlePushBy(event);
   }
 
 
@@ -315,21 +346,26 @@ export default class Mustafas {
       let pxToAdd = pushBy[xy].px * pushBy[xy].direction,
         stopMomentum = false;
 
-      newCoordinates[xy] = this._private.moveable[xy] + pxToAdd;
-
       // OVERSCROLLING IS ALLOWED
 
       // the further you overscroll, the smaller is the displacement; we multiply the displacement
       // by a linear factor of the overscroll distance
       if (this._config.overscroll) {
-        // check on axis start (left or top)
-        if (pushBy[xy].direction > 0 && this._private.moveable[xy] > boundaries[xy].axisStart) {
-          pxToAdd *= utils.easeLinear(Math.abs(this._private.moveable[xy]), 1, -1, this._config.maxTouchOverscroll);
-        }
-        // check on axis end (right or bottom)
-        else if (pushBy[xy].direction < 0 && this._private.moveable[xy] < boundaries[xy].axisEnd) {
-          let rightBottom = boundaries[xy].axisEnd - this._private.moveable[xy];
-          pxToAdd *= utils.easeLinear(Math.abs(rightBottom), 1, -1, this._config.maxTouchOverscroll);
+        if (this._private.overscroll[xy].px > 0) {
+          // for non-touch pushes (i.e. momentum) we use a smaller overscroll maximum, so that the
+          // momentum is reduced (and stopped) earlier. this gets us closer to the iOS behavior
+          let maxOverscroll = this._private.isTouchActive ? this._config.maxTouchOverscroll : this._config.maxMomentumOverscroll,
+            multiplier = utils.easeLinear(this._private.overscroll[xy].px, 1, -1, maxOverscroll);
+
+          pxToAdd *= multiplier;
+          console.log("mult",
+            multiplier.toFixed(2));
+
+          // todo remove literal value
+          if (multiplier < 0.1 && this._private.isMomentumOnAxis[xy]) {
+            console.log("px to add too small, stopping momentum", pxToAdd.toFixed(2));
+            this.momentum.stopMomentumOnAxis(xy);
+          }
         }
 
         newCoordinates[xy] = this._private.moveable[xy] + pxToAdd;
@@ -338,6 +374,8 @@ export default class Mustafas {
       // OVERSCROLLING IS NOT ALLOWED
 
       else {
+        newCoordinates[xy] = this._private.moveable[xy] + pxToAdd;
+
         // check on axis start (left or top)
         if (newCoordinates[xy] > boundaries[xy].axisStart) {
           newCoordinates[xy] = boundaries[xy].axisStart;
@@ -358,6 +396,7 @@ export default class Mustafas {
 
 
   _handleTouchMomentum(event) {
+    if (this._private.overscroll.x.px > 0 || this._private.overscroll.y.px > 0) return;
     this.momentum.startMomentum(event.data);
   }
 
@@ -406,6 +445,9 @@ export default class Mustafas {
         else if (newCoordinates[xy] < boundaries[xy].axisEnd) {
           overscroll[xy].isAxisEnd = true;
           overscroll[xy].px = boundaries[xy].axisEnd - newCoordinates[xy];
+        }
+        else {
+          overscroll[xy].px = 0;
         }
       }
     });
