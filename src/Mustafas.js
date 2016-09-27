@@ -41,7 +41,10 @@ let defaults = {
     maxPxPerFrame: 50,
 
     // minimum speed for scrolling, under which animated scrolling stops
-    minPxPerFrame: 0.2
+    minPxPerFrame: 0.2,
+
+    // minimum overscroll push multiplier, under which momentum is stopped
+    minPushMultiplier: 0.1
   },
 
   private: {
@@ -66,17 +69,10 @@ let defaults = {
         axisEnd: 0
       }
     },
-    overscroll: {
-      x: {
-        isAxisStart: false,
-        isAxisEnd: false,
-        px: 0
-      },
-      y: {
-        isAxisStart: false,
-        isAxisEnd: false,
-        px: 0
-      }
+    // amount of overscroll on each axis, is pixels
+    overscrollPx: {
+      x: 0,
+      y: 0
     },
     axis: ['x', 'y'],
     isBouncingOnAxis: { x: false, y: false },
@@ -181,6 +177,7 @@ export default class Mustafas {
 
 
   freezeScroll(shouldFreeze) {
+    this.momentum.stopMomentum();
     this.kotti.setEnabled(!shouldFreeze);
 
     // TODO stop momentum and/or animated scroll
@@ -229,7 +226,8 @@ export default class Mustafas {
     this._private.boundHandlersMomentum = {
       pushBy: this._handlePushBy.bind(this),
       startOnAxis: this._handleMomentumStartOnAxis.bind(this),
-      stopOnAxis: this._handleMomentumStopOnAxis.bind(this)
+      stopOnAxis: this._handleMomentumStopOnAxis.bind(this),
+      stop: this._handleMomentumStop.bind(this)
     };
 
     fUtils.forEach(this._private.boundHandlersMomentum, (handler, eventType) => {
@@ -271,6 +269,7 @@ export default class Mustafas {
   _handleTouchEnd() {
     this._private.isTouchActive = false;
     this._checkForBounceStart();
+    this._checkForPositionStable();
   }
 
 
@@ -295,42 +294,15 @@ export default class Mustafas {
   }
 
 
-  _handleMomentumStopOnAxis(event) {
-    this._private.isMomentumOnAxis[event.data.axis] = false;
-    this._checkForBounceStartOnAxis(event.data.axis);
+  _handleMomentumStop(event) {
+    console.log("ZAMN");
+    this._checkForPositionStable();
   }
 
 
-  // TODO remove
-  _handleMomentumPushBy(event) {
-    if (!this._config.overscroll) {
-      this._handlePushBy(event);
-      return;
-    }
-
-    let pushBy = {};
-
-    this._forXY((xy) => {
-      pushBy[xy] = {
-        direction: event.data[xy].direction,
-        px: event.data[xy].px
-      };
-
-      if (this._private.overscroll[xy].px > 0) {
-        let multiplier = utils.easeLinear(this._private.overscroll[xy].px, 1, -1, this._config.maxMomentumOverscroll);
-        pushBy[xy].px *= multiplier;
-        console.log("over, mult " + xy, this._private.overscroll[xy].px, multiplier);
-
-        if (pushBy[xy].px < this._config.minScrollPxPerFrame) {
-          pushBy[xy].px = 0;
-          console.log("pix too small on " + xy);
-          this.momentum.stopMomentumOnAxis(xy);
-        }
-      }
-    });
-
-    this._handlePushBy({ data: pushBy });
-    //this._handlePushBy(event);
+  _handleMomentumStopOnAxis(event) {
+    this._private.isMomentumOnAxis[event.data.axis] = false;
+    this._checkForBounceStartOnAxis(event.data.axis);
   }
 
 
@@ -351,18 +323,16 @@ export default class Mustafas {
       // the further you overscroll, the smaller is the displacement; we multiply the displacement
       // by a linear factor of the overscroll distance
       if (this._config.overscroll) {
-        if (this._private.overscroll[xy].px > 0) {
+        if (this._private.overscrollPx[xy] > 0) {
           // for non-touch pushes (i.e. momentum) we use a smaller overscroll maximum, so that the
           // momentum is reduced (and stopped) earlier. this gets us closer to the iOS behavior
           let maxOverscroll = this._private.isTouchActive ? this._config.maxTouchOverscroll : this._config.maxMomentumOverscroll,
-            multiplier = utils.easeLinear(this._private.overscroll[xy].px, 1, -1, maxOverscroll);
+            multiplier = utils.easeLinear(this._private.overscrollPx[xy], 1, -1, maxOverscroll);
 
           pxToAdd *= multiplier;
-          console.log("mult",
-            multiplier.toFixed(2));
 
           // todo remove literal value
-          if (multiplier < 0.1 && this._private.isMomentumOnAxis[xy]) {
+          if (multiplier < this._config.minPushMultiplier && this._private.isMomentumOnAxis[xy]) {
             console.log("px to add too small, stopping momentum", pxToAdd.toFixed(2));
             this.momentum.stopMomentumOnAxis(xy);
           }
@@ -396,8 +366,10 @@ export default class Mustafas {
 
 
   _handleTouchMomentum(event) {
-    if (this._private.overscroll.x.px > 0 || this._private.overscroll.y.px > 0) return;
-    this.momentum.startMomentum(event.data);
+    if (this._private.overscrollPx.x > 0 || this._private.overscrollPx.y > 0) return;
+    // TODO remove once kotti stops sending zeroes
+    if (event.data.x.pxPerFrame + event.data.y.pxPerFrame !== 0)
+      this.momentum.startMomentum(event.data);
   }
 
 
@@ -430,24 +402,20 @@ export default class Mustafas {
       // DEAL WITH OVERSCROLLING
 
       if (this._config.overscroll) {
-        let overscroll = this._private.overscroll,
+        let overscrollPx = this._private.overscrollPx,
           boundaries = this._private.boundaries;
 
-        // reset
-        overscroll[xy].isAxisStart = overscroll[xy].isAxisEnd = false;
 
         // check on axis start (left or top)
         if (newCoordinates[xy] > boundaries[xy].axisStart) {
-          overscroll[xy].isAxisStart = true;
-          overscroll[xy].px = newCoordinates[xy] - boundaries[xy].axisStart;
+          overscrollPx[xy] = newCoordinates[xy] - boundaries[xy].axisStart;
         }
         // check on axis end (right or bottom)
         else if (newCoordinates[xy] < boundaries[xy].axisEnd) {
-          overscroll[xy].isAxisEnd = true;
-          overscroll[xy].px = boundaries[xy].axisEnd - newCoordinates[xy];
+          overscrollPx[xy] = boundaries[xy].axisEnd - newCoordinates[xy];
         }
         else {
-          overscroll[xy].px = 0;
+          overscrollPx[xy] = 0;
         }
       }
     });
@@ -510,7 +478,10 @@ export default class Mustafas {
   _checkForPositionStable() {
     if (!this._private.isTouchActive
         && !this._private.isBouncingOnAxis.x
-        && !this._private.isBouncingOnAxis.y) {
+        && !this._private.isBouncingOnAxis.y
+        && !this._private.isMomentumOnAxis.x
+        && !this._private.isMomentumOnAxis.y) {
+      console.log("POS STABLE");
       this.dispatchEvent(new Event(events.positionStable), {
         position: {
           x: this._private.moveable.x,
@@ -522,26 +493,18 @@ export default class Mustafas {
         }
       });
     }
-  }
-
-
-  // OLD OLD OLD
-
-
-  /*
-  _onPositionChanged(event) {
-    this._private.position.x = event.data.x;
-    this._private.position.y = event.data.y;
-    this._config.moveable.style.webkitTransform = 'translate3d(' + this._private.position.x + 'px, ' + this._private.position.y + 'px, 0px)';
-  }
-
-
-  _setWegbierPosition(position) {
-    this._private.wegbier.scrollTo(position);
+    else {
+      console.log("touch", this._private.isTouchActive);
+      console.log("bounce", this._private.isBouncingOnAxis.x, this._private.isBouncingOnAxis.y);
+      console.log("mom", this._private.isMomentumOnAxis.x, this._private.isMomentumOnAxis.y);
+    }
   }
 
 
   // ANIMATED SCROLLING
+
+
+ /*
 
 
   _bindAnimatedScroll() {
