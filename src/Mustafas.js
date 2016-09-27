@@ -24,17 +24,20 @@ let defaults = {
     // allow scrolling beyond the edge of moveable
     overscroll: true,
 
-    // speed for animated scrolling, in px/frame
-    maxScrollPxPerFrame: 50,
-
-    // minimum speed for animated scrolling, under which animated scrolling stops
-    minScrollPxPerFrame: 0.2,
+    // maximum amount of pixels for touch-led overscrolling
+    maxTouchOverscroll: 150,
 
     // how much time (in msec) it takes to bounce back
     bounceTime: 500,
 
     // how much time (in msec) it takes to animate-scroll
-    scrollTime: 500
+    scrollTime: 500,
+
+    // speed for animated scrolling, in px/frame
+    maxScrollPxPerFrame: 50,
+
+    // minimum speed for animated scrolling, under which animated scrolling stops
+    minScrollPxPerFrame: 0.2
   },
 
   private: {
@@ -72,7 +75,8 @@ let defaults = {
       }
     },
     isBouncingOnAxis: { x: false, y: false },
-    axis: ['x']
+    isMomentumOnAxis: { x: false, y: false },
+    axis: ['x', 'y']
     /*
     boundHandlers: {},
     axis: ['x', 'y'],
@@ -255,6 +259,22 @@ export default class Mustafas {
   }
 
 
+  _handleBounceStartOnAxis(event) {
+    this._private.isBouncingOnAxis[event.data.axis] = true;
+  }
+
+
+  _handleBounceEndOnAxis(event) {
+    this._private.isBouncingOnAxis[event.data.axis] = false;
+    this._checkForPositionStable();
+  }
+
+
+  _handleBounceToPosition(event) {
+    this._updateCoords(event.data);
+  }
+
+
   _handlePushBy(event) {
     let pushBy = event.data,
       newCoordinates = {
@@ -315,8 +335,8 @@ export default class Mustafas {
     this._private.container.width = this._config.container.clientWidth;
     this._private.container.height = this._config.container.clientHeight;
 
-    this._private.moveable.width = this._config.container.clientWidth;
-    this._private.moveable.height = this._config.container.clientHeight;
+    this._private.moveable.width = this._config.moveable.clientWidth;
+    this._private.moveable.height = this._config.moveable.clientHeight;
 
     // calculate the maximum and minimum coordinates for scrolling. these are used as boundaries for
     // determining overscroll status, initiating bounce (if allowed); and also to determine bounce
@@ -325,6 +345,9 @@ export default class Mustafas {
       let dimension = xy === 'x' ? 'width' : 'height';
       this._private.boundaries[xy].axisStart = 0;
       this._private.boundaries[xy].axisEnd = this._private.container[dimension] - this._private.moveable[dimension];
+      // moveable is smaller than container on this axis, the only "stable" position is 0
+      if (this._private.boundaries[xy].axisEnd > 0) this._private.boundaries[xy].axisEnd = 0;
+      console.log("axisEnd " + xy, this._private.boundaries[xy].axisEnd, this._private.container, this._private.moveable);
     });
   }
 
@@ -381,6 +404,49 @@ export default class Mustafas {
   _updateElementPositions() {
     this._config.moveable.style.webkitTransform = `translate3d(
         ${this._private.moveable.x}px, ${this._private.moveable.y}px, 0px)`;
+  }
+
+
+  // CONDITION CHECKING
+
+
+  _checkForBounceStart() {
+    this._forXY((xy) => {
+      this._checkForBounceStartOnAxis(xy);
+    });
+  }
+
+
+  _checkForBounceStartOnAxis(axis) {
+    // TODO single-line
+    if (this._state.isTouchActive
+        || this._private.isBouncingOnAxis[axis]
+        || this._private.isMomentumOnAxis[axis]) return;
+
+    if (this._private.moveable[axis] > this._private.boundaries[axis].axisStart) {
+      this.bounce.bounceToTargetOnAxis(axis, this._private.moveable[axis], this._private.boundaries[axis].axisStart);
+    }
+    else if (this._private.moveable[axis] < this._private.boundaries[axis].axisEnd) {
+      this.bounce.bounceToTargetOnAxis(axis, this._private.moveable[axis], this._private.boundaries[axis].axisEnd);
+    }
+  }
+
+
+  _checkForPositionStable() {
+    if (!this._state.isTouchActive
+        && !this._private.isBouncingOnAxis.x
+        && !this._private.isBouncingOnAxis.y) {
+      this.dispatchEvent(new Event(events.positionStable), {
+        position: {
+          x: this._private.moveable.x,
+          y: this._private.moveable.y
+        },
+        percent: {
+          x: this._private.moveable.x / (this._private.moveable.width - this._private.container.width),
+          y: this._private.moveable.y / (this._private.moveable.height - this._private.container.height)
+        }
+      });
+    }
   }
 
 
@@ -517,6 +583,7 @@ export default class Mustafas {
   }
 
 
+  /*
   _getNearestValidPosition(position) {
     let result = { x: 0, y: 0 };
 
@@ -534,4 +601,5 @@ export default class Mustafas {
 
     return result;
   }
+  */
 };
