@@ -175,8 +175,6 @@ export default class Mustafas {
     this.momentum.stopMomentum();
     this.animatedScroll.stop();
     this.kotti.setEnabled(!shouldFreeze);
-
-    // TODO stop momentum and/or animated scroll
   }
 
 
@@ -282,13 +280,9 @@ export default class Mustafas {
 
   _handleTouchStart() {
     this._private.isTouchActive = true;
-    if (this._private.isBouncingOnAxis.x || this._private.isBouncingOnAxis.y) {
-      this.bounce.stop();
-    }
-    // TODO stop momentum too
-    if (this._private.isMomentumOnAxis.x || this._private.isMomentumOnAxis.y) {
-      this.momentum.stopMomentum();
-    }
+
+    this.bounce.stop();
+    this.momentum.stopMomentum();
   }
 
 
@@ -407,12 +401,10 @@ export default class Mustafas {
 
 
   _handleTouchMomentum(event) {
+    // do not start new momentum when overscrolling
     if (this._private.overscrollPx.x > 0 || this._private.overscrollPx.y > 0) return;
 
-    // TODO remove once kotti stops sending zeroes
-    if (event.data.x.pxPerFrame + event.data.y.pxPerFrame !== 0) {
-      this.momentum.startMomentum(event.data);
-    }
+    this.momentum.startMomentum(event.data);
   }
 
 
