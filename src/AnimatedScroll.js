@@ -3,7 +3,9 @@ import { default as utils } from './utils.js';
 
 let defaults = {
   config: {
-    maxPxPerFrame: 20
+    maxPxPerFrame: 50,
+    minPxPerFrame: 0.2,
+    slowingDistance: 100
   },
 
   private: {
@@ -24,7 +26,7 @@ let defaults = {
 
 let events = {
   start: 'animatedScroll:start',
-  pushBy: 'animatedScroll:pushBy',
+  scrollTo: 'animatedScroll:scrollTo',
   stop: 'animatedScroll:stop'
 };
 
@@ -94,33 +96,38 @@ export default class AnimatedScroll {
     this._private.maxPxPerFrame = scrollSpeed > 0 ? scrollSpeed : this._config.maxPxPerFrame;
     // set the current scrolling speed to the maximum speed; speed will decrease as the moveable
     // nears its target position
-    animatedScroll.pxPerFrame = animatedScroll.maxPxPerFrame;
-    animatedScroll.isAnimatedScrolling = true;
+    this._private.pxPerFrame = this._private.maxPxPerFrame;
+    this._private.isActive = true;
 
     this._private.currentFrame = requestAnimationFrame(this._private.boundAnimatedScroll);
+
+    this.dispatchEvent(new Event(events.start));
   }
 
 
   _runAnimatedScroll() {
-    let animatedScroll = this._private.animatedScroll,
-      distanceToTarget = this._getPositionDistance(this._private.position, animatedScroll.targetPosition);
+    let distanceToTarget = this._getPositionDistance(this._private.currentPosition, this._private.tragetPosition);
 
     // slow down when close to target
-    if (distanceToTarget < this._config.scrollToSlowingDistance) {
-      animatedScroll.pxPerFrame = animatedScroll.maxPxPerFrame * (distanceToTarget/this._config.scrollToSlowingDistance);
+    if (distanceToTarget < this._config.slowingDistance) {
+      this._private.pxPerFrame = this._private.maxPxPerFrame * (distanceToTarget/this._config.slowingDistance);
     }
 
     // stop when on target
     if (distanceToTarget < 1 || animatedScroll.pxPerFrame < this._config.minScrollPxPerFrame) {
-        this._stopAnimatedScroll();
-        this._setWegbierPosition(animatedScroll.targetPosition);
+      this._private.currentPosition.x += this._private.targetPosition.x;
+      this._private.currentPosition.y += this._private.targetPosition.y;
+
+      this.dispatchEvent(new Event(events.scrollTo), this._private.targetPosition);
+
+      this._stopAnimatedScroll();
     }
     // otherwise move towards target
     else {
-      this._forXY((xy) => {
-        this._private.position[xy] += animatedScroll.pxPerFrame * animatedScroll.direction[xy];
-      });
-      this._setWegbierPosition(this._private.position);
+      this._private.currentPosition.x += this._private.pxPerFrame.x * this._private.direction.x;
+      this._private.currentPosition.y += this._private.pxPerFrame.y * this._private.direction.y;
+
+      this.dispatchEvent(new Event(events.scrollTo), this._private.currentPosition);
 
       this._private.currentFrame = requestAnimationFrame(this._private.boundAnimatedScroll);
     }
@@ -128,11 +135,20 @@ export default class AnimatedScroll {
 
 
   _stopAnimatedScroll() {
-    let animatedScroll = this._private.animatedScroll;
+    if (!this._private.isActive) return;
 
-    animatedScroll.pxPerFrame = 0;
-    animatedScroll.isAnimatedScrolling = false;
+    this._private.pxPerFrame = 0;
+    this._private.isActive = false;
 
     cancelAnimationFrame(this._private.currentFrame);
+    this.dispatchEvent(new Event(events.stop));
+  }
+
+
+  // HELPERS
+
+
+  _getPositionDistance(pos1, pos2) {
+    return Math.sqrt( (pos2.x -= pos1.x) * pos2.x + (pos2.y -= pos1.y) * pos2.y );
   }
 }
