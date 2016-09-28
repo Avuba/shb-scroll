@@ -4,7 +4,7 @@ import { default as utils } from './utils.js';
 import { default as Momentum } from './Momentum.js';
 import { default as Bounce } from './Bounce.js';
 import { default as AnimatedScroll } from './AnimatedScroll.js';
-
+import { default as ResizeDebouncer } from './ResizeDebouncer.js';
 
 let defaults = {
   config: {
@@ -48,7 +48,10 @@ let defaults = {
     minMomentumPush: 1.0,
 
     // minimum overscroll push multiplier, under which momentum is stopped
-    minMomentumMultiplier: 0.15
+    minMomentumMultiplier: 0.15,
+
+    // when set to true, listens to debounced window.resize events and calls refresh
+    refreshOnResize: true
   },
 
   private: {
@@ -105,6 +108,8 @@ export default class Mustafas {
     this.bounce = new Bounce(this._config);
     this.momentum = new Momentum(this._config);
     this.animatedScroll = new AnimatedScroll(this._config);
+
+    if (this._config.refreshOnResize) this.resizeDebouncer = new ResizeDebouncer();
 
     this.events = events;
     utils.addEventTargetInterface(this);
@@ -184,6 +189,8 @@ export default class Mustafas {
   destroy() {
     this._unbindEvents();
     this.kotti.destroy();
+
+    if (this.resizeDebouncer) this.resizeDebouncer.destroy();
 
     this._config.container = null;
     this._config.moveable = null;
