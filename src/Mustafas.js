@@ -158,12 +158,12 @@ export default class Mustafas {
 
 
   scrollTop(shouldAnimate, scrollSpeed) {
-    this.scrollTo(this._private.position.x, 0, shouldAnimate, scrollSpeed);
+    this.scrollTo(this._private.moveable.x, this._private.boundaries.y.axisStart, shouldAnimate, scrollSpeed);
   }
 
 
   scrollBottom(shouldAnimate, scrollSpeed) {
-    this.scrollTo(this._private.position.x, this._private.positionLimits.y, shouldAnimate, scrollSpeed);
+    this.scrollTo(this._private.moveable.x, this._private.boundaries.y.axisEnd, shouldAnimate, scrollSpeed);
   }
 
 

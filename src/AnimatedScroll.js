@@ -124,15 +124,32 @@ export default class AnimatedScroll {
 
   _runAnimatedScroll() {
     let distanceToTarget = this._getPositionDistance(this._private.currentPosition, this._private.targetPosition);
-    console.log("dist, speed", distanceToTarget, this._private.pxPerFrame);
 
     // slow down when close to target
     if (distanceToTarget < this._config.slowingDistance) {
       this._private.pxPerFrame = this._private.maxPxPerFrame * (distanceToTarget/this._config.slowingDistance);
     }
 
+    // we need to check if the current position passed the target, which can happen at high speeds
+    let passedTargetX = false,
+      passedTargetY = false;
+
+    if (this._private.direction.x > 0) {
+      passedTargetX = this._private.currentPosition.x > this._private.targetPosition.x;
+    }
+    else {
+      passedTargetX = this._private.currentPosition.x < this._private.targetPosition.x;
+    }
+
+    if (this._private.direction.y > 0) {
+      passedTargetY = this._private.currentPosition.y > this._private.targetPosition.y;
+    }
+    else {
+      passedTargetY = this._private.currentPosition.y < this._private.targetPosition.y;
+    }
+
     // stop when on target
-    if (distanceToTarget < 1 || this._private.pxPerFrame < this._config.minScrollPxPerFrame) {
+    if (distanceToTarget < 1 || this._private.pxPerFrame < this._config.minScrollPxPerFrame || passedTargetX || passedTargetY) {
       this._private.currentPosition.x += this._private.targetPosition.x;
       this._private.currentPosition.y += this._private.targetPosition.y;
 
