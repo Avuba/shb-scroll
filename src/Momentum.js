@@ -74,16 +74,10 @@ export default class Momentum {
     this._private.currentFrame = requestAnimationFrame(this._private.boundMomentum);
 
     this._forXY((xy) => {
-      if (!wasActive[xy]) {
-        console.log("Momentum started on", xy);
-        this.dispatchEvent(new Event(events.startOnAxis), { axis: xy });
-      }
+      if (!wasActive[xy]) this.dispatchEvent(new Event(events.startOnAxis), { axis: xy });
     });
 
-    if (!wasActive.x && !wasActive.y) {
-      console.log("Momentum started");
-      this.dispatchEvent(new Event(events.start));
-    }
+    if (!wasActive.x && !wasActive.y) this.dispatchEvent(new Event(events.start));
   }
 
 
@@ -100,12 +94,10 @@ export default class Momentum {
       this._private.currentMomentum[axis].pxPerFrame = 0;
       this._private.isActive[axis] = false;
 
-      console.log("Momentum stopped on ", axis);
       this.dispatchEvent(new Event(events.stopOnAxis), { axis: axis });
 
       if (!this._private.isActive.x && !this._private.isActive.y) {
         cancelAnimationFrame(this._private.currentFrame);
-        console.log("Momentum stopped (from onAxis)");
         this.dispatchEvent(new Event(events.stop));
       }
     }
@@ -122,9 +114,9 @@ export default class Momentum {
 
   _runMomentum() {
     let pushBy = {
-        x: { direction: 0, px: 0 },
-        y: { direction: 0, px: 0 }
-      };
+      x: { direction: 0, px: 0 },
+      y: { direction: 0, px: 0 }
+    };
 
     this._forXY((xy) => {
       if (!this._private.isActive.x && !this._private.isActive.y) return; {
@@ -143,7 +135,8 @@ export default class Momentum {
 
     if (!this._private.isActive.x && !this._private.isActive.y) {
       this.stopMomentum();
-    } else {
+    }
+    else {
       this.dispatchEvent(new Event(events.pushBy), pushBy);
       this._private.currentFrame = requestAnimationFrame(this._private.boundMomentum);
     }

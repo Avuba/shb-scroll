@@ -51,7 +51,6 @@ export default class AnimatedScroll {
   startAnimatedScroll(startPosition, targetPosition, scrollSpeed) {
     if (this._private.isActive) cancelAnimationFrame(this._private.currentFrame);
 
-    console.log("starAnimScr target", targetPosition);
     this._private.isActive = true;
 
     // SET STARTING POSITION AND TARGET
@@ -86,7 +85,6 @@ export default class AnimatedScroll {
     this._private.direction.radians = Math.atan2(distance.y, distance.x);
     this._private.direction.x = Math.cos(this._private.direction.radians);
     this._private.direction.y = Math.sin(this._private.direction.radians);
-    console.log("direction", this._private.direction);
 
     // SET SPEED AND START ANIMATING
 
@@ -99,7 +97,6 @@ export default class AnimatedScroll {
     this._private.currentFrame = requestAnimationFrame(this._private.boundAnimatedScroll);
 
     this.dispatchEvent(new Event(events.start));
-    console.log("TUVA", this._private.targetPosition);
   }
 
 

@@ -332,13 +332,11 @@ export default class Mustafas {
 
 
   _handleAnimatedScrollStart() {
-    console.log("START");
     this._private.isAnimatedScrolling = true;
   }
 
 
   _handleAnimatedScrollStop() {
-    console.log("STOP");
     this._private.isAnimatedScrolling = false;
     this._checkForPositionStable();
   }
@@ -377,7 +375,6 @@ export default class Mustafas {
           // todo remove literal value
           if (this._private.isMomentumOnAxis[xy]
             && (multiplier < this._config.minMomentumMultiplier || Math.abs(pxToAdd) < this._config.minMomentumPush)) {
-            console.log("px/mult too small", pxToAdd.toFixed(2), multiplier.toFixed(2));
             this.momentum.stopMomentumOnAxis(xy);
           }
         }
@@ -411,6 +408,7 @@ export default class Mustafas {
 
   _handleTouchMomentum(event) {
     if (this._private.overscrollPx.x > 0 || this._private.overscrollPx.y > 0) return;
+
     // TODO remove once kotti stops sending zeroes
     if (event.data.x.pxPerFrame + event.data.y.pxPerFrame !== 0) {
       this.momentum.startMomentum(event.data);
@@ -527,7 +525,6 @@ export default class Mustafas {
         && !this._private.isBouncingOnAxis.y
         && !this._private.isMomentumOnAxis.x
         && !this._private.isMomentumOnAxis.y) {
-      console.log("POS STABLE");
       this.dispatchEvent(new Event(events.positionStable), {
         position: {
           x: this._private.moveable.x,
