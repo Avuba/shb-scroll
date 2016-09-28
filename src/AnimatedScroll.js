@@ -3,11 +3,22 @@ import { default as utils } from './utils.js';
 
 let defaults = {
   config: {
-
+    maxPxPerFrame: 20
   },
 
   private: {
-
+    isActive: false,
+    startPosition: { x: 0, y: 0 },
+    currentPosition: { x: 0, y: 0 },
+    targetPosition: { x: 0, y: 0 },
+    totalDistance: 0,
+    pxPerFrame: 0,
+    maxPxPerFrame: 0,
+    direction: {
+      radians: 0,
+      x: 0,         // component weight in x, effectively cos(radians)
+      y: 0          // component weight in y, effectively sin(radians)
+    }
   }
 };
 
@@ -32,56 +43,55 @@ export default class AnimatedScroll {
   }
 
 
+  // LIFECYCLE
+
+
   _bindAnimatedScroll() {
     this._private.boundAnimatedScroll = this._runAnimatedScroll.bind(this);
   }
 
 
-  _startAnimatedScroll(targetPosition, scrollSpeed) {
-    let animatedScroll = this._private.animatedScroll;
+  _startAnimatedScroll(startPosition, targetPosition, scrollSpeed) {
+    if (this._private.isActive) cancelAnimationFrame(this._private.currentFrame);
 
-    cancelAnimationFrame(this._private.currentFrame);
+    this._private.isActive = true;
 
-    // SET STARTING POSITION AND VALID TARGET
+    // SET STARTING POSITION AND TARGET
 
-    animatedScroll.startingPosition = {
-      x: this._private.position.x,
-      y: this._private.position.y
+    this._private.startPosition = {
+      x: startPosition.x,
+      y: startPosition.y
     };
 
-    animatedScroll.targetPosition = {
-      x: this._private.position.x,
-      y: this._private.position.y
+    this._private.currentPosition = {
+      x: startPosition.x,
+      y: startPosition.y
     };
 
-    let validTargetPosition = this._getNearestValidPosition(targetPosition);
+    this._private.targetPosition = {
+      x: targetPosition.x,
+      y: targetPosition.y
+    };
 
-    // only set a target position for axes on which scrolling is enabled.
-    // otherwise, tarhet position remains the same as current position.
-    this._forXY((xy) => {
-      animatedScroll.targetPosition[xy] = validTargetPosition[xy];
-    });
-
-    animatedScroll.totalDistance = this._getPositionDistance(
-      animatedScroll.startingPosition,
-      animatedScroll.targetPosition
+    this._private.totalDistance = this._getPositionDistance(
+      this._private.startPosition,
+      this._private.targetPosition
     );
 
     // CALCULATE SCROLL DIRECTION
 
-    let distance = { x: 0, y: 0 };
+    let distance = {
+      x: this._private.targetPosition.x - this._private.startPosition.x,
+      y: this._private.targetPosition.y - this._private.startPosition.y
+    };
 
-    this._forXY((xy) => {
-      distance[xy] = animatedScroll.targetPosition[xy] - animatedScroll.startingPosition[xy];
-    });
-
-    animatedScroll.direction.radians = Math.atan2(distance.y, distance.x);
-    animatedScroll.direction.x = Math.cos(animatedScroll.direction.radians);
-    animatedScroll.direction.y = Math.sin(animatedScroll.direction.radians);
+    this._private.direction.radians = Math.atan2(distance.y, distance.x);
+    this._private.direction.x = Math.cos(this._private.direction.radians);
+    this._private.direction.y = Math.sin(this._private.direction.radians);
 
     // SET SPEED AND START ANIMATING
 
-    animatedScroll.maxPxPerFrame = scrollSpeed > 0 ? scrollSpeed : this._config.maxScrollPxPerFrame;
+    this._private.maxPxPerFrame = scrollSpeed > 0 ? scrollSpeed : this._config.maxPxPerFrame;
     // set the current scrolling speed to the maximum speed; speed will decrease as the moveable
     // nears its target position
     animatedScroll.pxPerFrame = animatedScroll.maxPxPerFrame;
