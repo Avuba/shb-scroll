@@ -126,7 +126,6 @@ export default class Mustafas {
 
   refresh(config) {
     if (config) fUtils.mergeDeep(this._config, config);
-
     this._calculateParams();
   }
 
@@ -194,7 +193,7 @@ export default class Mustafas {
 
     this._config.container = null;
     this._config.moveable = null;
-  };
+  }
 
 
   // LIFECYCLE
@@ -242,6 +241,11 @@ export default class Mustafas {
     fUtils.forEach(this._private.boundHandlersAnimatedScroll, (handler, eventType) => {
       this.animatedScroll.addEventListener(this.animatedScroll.events[eventType], handler);
     });
+
+    if (this.resizeDebouncer) {
+      this._private.boundHandlerResize = this._handleResize.bind(this);
+      this.resizeDebouncer.addEventListener(this.resizeDebouncer.events.resize, this._private.boundHandlerResize);
+    }
   }
 
 
@@ -257,10 +261,23 @@ export default class Mustafas {
     fUtils.forEach(this._private.boundHandlersMomentum, (handler, eventType) => {
       this.momentum.removeEventListener(this.momentum.events[eventType], handler);
     });
+
+    fUtils.forEach(this._private.boundHandlersAnimatedScroll, (handler, eventType) => {
+      this.animatedScroll.removeEventListener(this.animatedScroll.events[eventType], handler);
+    });
+
+    if (this.resizeDebouncer) {
+      this.resizeDebouncer.removeEventListener(this.resizeDebouncer.events.resize, this._private.boundHandlerResize);
+    }
   }
 
 
   // EVENT HANDLERS
+
+
+  _handleResize() {
+    this.refresh();
+  }
 
 
   _handleTouchStart() {
@@ -303,7 +320,7 @@ export default class Mustafas {
   }
 
 
-  _handleMomentumStop(event) {
+  _handleMomentumStop() {
     this._checkForPositionStable();
   }
 
@@ -314,13 +331,13 @@ export default class Mustafas {
   }
 
 
-  _handleAnimatedScrollStart(event) {
+  _handleAnimatedScrollStart() {
     console.log("START");
     this._private.isAnimatedScrolling = true;
   }
 
 
-  _handleAnimatedScrollStop(event) {
+  _handleAnimatedScrollStop() {
     console.log("STOP");
     this._private.isAnimatedScrolling = false;
     this._checkForPositionStable();
@@ -395,8 +412,9 @@ export default class Mustafas {
   _handleTouchMomentum(event) {
     if (this._private.overscrollPx.x > 0 || this._private.overscrollPx.y > 0) return;
     // TODO remove once kotti stops sending zeroes
-    if (event.data.x.pxPerFrame + event.data.y.pxPerFrame !== 0)
+    if (event.data.x.pxPerFrame + event.data.y.pxPerFrame !== 0) {
       this.momentum.startMomentum(event.data);
+    }
   }
 
 

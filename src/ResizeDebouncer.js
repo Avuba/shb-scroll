@@ -15,7 +15,7 @@ let defaults = {
 
 
 let events = {
-  resize: 'resizeDebouncer:resize',
+  resize: 'resizeDebouncer:resize'
 };
 
 
