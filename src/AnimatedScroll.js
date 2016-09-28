@@ -5,7 +5,7 @@ let defaults = {
   config: {
     maxPxPerFrame: 50,
     minPxPerFrame: 0.2,
-    slowingDistance: 100
+    slowingDistance: 150
   },
 
   private: {
@@ -45,17 +45,13 @@ export default class AnimatedScroll {
   }
 
 
-  // LIFECYCLE
+  // PUBLIC
 
 
-  _bindAnimatedScroll() {
-    this._private.boundAnimatedScroll = this._runAnimatedScroll.bind(this);
-  }
-
-
-  _startAnimatedScroll(startPosition, targetPosition, scrollSpeed) {
+  startAnimatedScroll(startPosition, targetPosition, scrollSpeed) {
     if (this._private.isActive) cancelAnimationFrame(this._private.currentFrame);
 
+    console.log("starAnimScr target", targetPosition);
     this._private.isActive = true;
 
     // SET STARTING POSITION AND TARGET
@@ -90,6 +86,7 @@ export default class AnimatedScroll {
     this._private.direction.radians = Math.atan2(distance.y, distance.x);
     this._private.direction.x = Math.cos(this._private.direction.radians);
     this._private.direction.y = Math.sin(this._private.direction.radians);
+    console.log("direction", this._private.direction);
 
     // SET SPEED AND START ANIMATING
 
@@ -102,39 +99,11 @@ export default class AnimatedScroll {
     this._private.currentFrame = requestAnimationFrame(this._private.boundAnimatedScroll);
 
     this.dispatchEvent(new Event(events.start));
+    console.log("TUVA", this._private.targetPosition);
   }
 
 
-  _runAnimatedScroll() {
-    let distanceToTarget = this._getPositionDistance(this._private.currentPosition, this._private.tragetPosition);
-
-    // slow down when close to target
-    if (distanceToTarget < this._config.slowingDistance) {
-      this._private.pxPerFrame = this._private.maxPxPerFrame * (distanceToTarget/this._config.slowingDistance);
-    }
-
-    // stop when on target
-    if (distanceToTarget < 1 || animatedScroll.pxPerFrame < this._config.minScrollPxPerFrame) {
-      this._private.currentPosition.x += this._private.targetPosition.x;
-      this._private.currentPosition.y += this._private.targetPosition.y;
-
-      this.dispatchEvent(new Event(events.scrollTo), this._private.targetPosition);
-
-      this._stopAnimatedScroll();
-    }
-    // otherwise move towards target
-    else {
-      this._private.currentPosition.x += this._private.pxPerFrame.x * this._private.direction.x;
-      this._private.currentPosition.y += this._private.pxPerFrame.y * this._private.direction.y;
-
-      this.dispatchEvent(new Event(events.scrollTo), this._private.currentPosition);
-
-      this._private.currentFrame = requestAnimationFrame(this._private.boundAnimatedScroll);
-    }
-  }
-
-
-  _stopAnimatedScroll() {
+  stopAnimatedScroll() {
     if (!this._private.isActive) return;
 
     this._private.pxPerFrame = 0;
@@ -145,10 +114,48 @@ export default class AnimatedScroll {
   }
 
 
+  // LIFECYCLE
+
+
+  _bindAnimatedScroll() {
+    this._private.boundAnimatedScroll = this._runAnimatedScroll.bind(this);
+  }
+
+
+  _runAnimatedScroll() {
+    let distanceToTarget = this._getPositionDistance(this._private.currentPosition, this._private.targetPosition);
+    console.log("dist, speed", distanceToTarget, this._private.pxPerFrame);
+
+    // slow down when close to target
+    if (distanceToTarget < this._config.slowingDistance) {
+      this._private.pxPerFrame = this._private.maxPxPerFrame * (distanceToTarget/this._config.slowingDistance);
+    }
+
+    // stop when on target
+    if (distanceToTarget < 1 || this._private.pxPerFrame < this._config.minScrollPxPerFrame) {
+      this._private.currentPosition.x += this._private.targetPosition.x;
+      this._private.currentPosition.y += this._private.targetPosition.y;
+
+      this.dispatchEvent(new Event(events.scrollTo), this._private.targetPosition);
+
+      this.stopAnimatedScroll();
+    }
+    // otherwise move towards target
+    else {
+      this._private.currentPosition.x += this._private.pxPerFrame * this._private.direction.x;
+      this._private.currentPosition.y += this._private.pxPerFrame * this._private.direction.y;
+
+      this.dispatchEvent(new Event(events.scrollTo), this._private.currentPosition);
+
+      this._private.currentFrame = requestAnimationFrame(this._private.boundAnimatedScroll);
+    }
+  }
+
+
   // HELPERS
 
 
   _getPositionDistance(pos1, pos2) {
-    return Math.sqrt( (pos2.x -= pos1.x) * pos2.x + (pos2.y -= pos1.y) * pos2.y );
+    return Math.sqrt( ((pos2.x - pos1.x) * (pos2.x - pos1.x)) + ((pos2.y - pos1.y) * (pos2.y - pos1.y)) );
   }
 }

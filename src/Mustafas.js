@@ -3,6 +3,7 @@ import { default as fUtils } from './fUtils/index.js';
 import { default as utils } from './utils.js';
 import { default as Momentum } from './Momentum.js';
 import { default as Bounce } from './Bounce.js';
+import { default as AnimatedScroll } from './AnimatedScroll.js';
 
 
 let defaults = {
@@ -80,27 +81,8 @@ let defaults = {
     axis: ['x', 'y'],
     isBouncingOnAxis: { x: false, y: false },
     isMomentumOnAxis: { x: false, y: false },
+    isAnimatedScrolling: false,
     isTouchActive: false
-    /*
-    boundHandlers: {},
-    axis: ['x', 'y'],
-    position: { x: 0, y: 0 },
-    positionLimits: { x: 0, y: 0},
-    isScrollFrozen: false,
-    animatedScroll: {
-      isAnimatedScrolling: false,
-      pxPerFrame: 0,
-      maxPxPerFrame: 0,
-      direction: {
-        radians: 0,
-        x: 0,         // component weight in x, effectively cos(radians)
-        y: 0          // component weight in y, effectively sin(radians)
-      },
-      startingPosition: { x: 0, y: 0 },
-      targetPosition: { x: 0, y: 0 },
-      totalDistance: 0
-    }
-    */
   }
 };
 
@@ -122,6 +104,7 @@ export default class Mustafas {
     this.kotti = new Kotti(this._config);
     this.bounce = new Bounce(this._config);
     this.momentum = new Momentum(this._config);
+    this.animatedScroll = new AnimatedScroll(this._config);
 
     this.events = events;
     utils.addEventTargetInterface(this);
@@ -144,22 +127,27 @@ export default class Mustafas {
 
 
   getScrollPosition() {
-    return { left: this._private.position.x, top: this._private.position.y };
+    return { left: this._private.moveable.x, top: this._private.moveable.y };
   }
 
 
   scrollTo(left, top, shouldAnimate, scrollSpeed) {
     if (this._private.isScrollFrozen) return;
 
-    if (this._private.animatedScroll.isAnimatedScrolling) {
-      this._stopAnimatedScroll();
+    if (this._private.isAnimatedScrolling) {
+      this.animatedScroll.stopAnimatedScroll();
     }
 
+    let validTargetPosition = this._getNearestValidPosition({ x: left, y: top });
+
     if (shouldAnimate) {
-      this._startAnimatedScroll( { x: left, y: top }, scrollSpeed );
+      // TODO stop any bounce or momentum
+      this.momentum.stopMomentum();
+      this.bounce.stop();
+      this.animatedScroll.startAnimatedScroll(this._private.moveable, validTargetPosition, scrollSpeed);
     }
     else {
-      this._setWegbierPosition( { x: left, y: top } );
+      this._updateCoords(validTargetPosition);
     }
   }
 
@@ -181,6 +169,7 @@ export default class Mustafas {
 
   freezeScroll(shouldFreeze) {
     this.momentum.stopMomentum();
+    this.animatedScroll.stop();
     this.kotti.setEnabled(!shouldFreeze);
 
     // TODO stop momentum and/or animated scroll
@@ -235,6 +224,16 @@ export default class Mustafas {
 
     fUtils.forEach(this._private.boundHandlersMomentum, (handler, eventType) => {
       this.momentum.addEventListener(this.momentum.events[eventType], handler);
+    });
+
+    this._private.boundHandlersAnimatedScroll = {
+      start: this._handleAnimatedScrollStart.bind(this),
+      scrollTo: this._handleAnimatedScrollTo.bind(this),
+      stop: this._handleAnimatedScrollStop.bind(this)
+    };
+
+    fUtils.forEach(this._private.boundHandlersAnimatedScroll, (handler, eventType) => {
+      this.animatedScroll.addEventListener(this.animatedScroll.events[eventType], handler);
     });
   }
 
@@ -305,6 +304,24 @@ export default class Mustafas {
   _handleMomentumStopOnAxis(event) {
     this._private.isMomentumOnAxis[event.data.axis] = false;
     this._checkForBounceStartOnAxis(event.data.axis);
+  }
+
+
+  _handleAnimatedScrollStart(event) {
+    console.log("START");
+    this._private.isAnimatedScrolling = true;
+  }
+
+
+  _handleAnimatedScrollStop(event) {
+    console.log("STOP");
+    this._private.isAnimatedScrolling = false;
+    this._checkForPositionStable();
+  }
+
+
+  _handleAnimatedScrollTo(event) {
+    this._updateCoords(event.data);
   }
 
 
@@ -480,6 +497,7 @@ export default class Mustafas {
 
   _checkForPositionStable() {
     if (!this._private.isTouchActive
+        && !this._private.isAnimatedScrolling
         && !this._private.isBouncingOnAxis.x
         && !this._private.isBouncingOnAxis.y
         && !this._private.isMomentumOnAxis.x
@@ -619,16 +637,16 @@ export default class Mustafas {
   }
 
 
-  /*
   _getNearestValidPosition(position) {
-    let result = { x: 0, y: 0 };
+    let result = { x: 0, y: 0 },
+      boundaries = this._private.boundaries;
 
     this._forXY((xy) => {
-      if (position[xy] > 0) {
-        result[xy] = 0;
+      if (position[xy] > boundaries[xy].axisStart) {
+        result[xy] = boundaries[xy].axisStart;
       }
-      else if (position[xy] < this._private.positionLimits[xy]) {
-        result[xy] = this._private.positionLimits[xy];
+      else if (position[xy] < boundaries[xy].axisEnd) {
+        result[xy] = boundaries[xy].axisEnd;
       }
       else {
         result[xy] = position[xy];
@@ -637,5 +655,4 @@ export default class Mustafas {
 
     return result;
   }
-  */
 };
