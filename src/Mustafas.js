@@ -1,7 +1,10 @@
-import { default as Wegbier } from '../node_modules/wegbier/dist/Wegbier.js';
+import { default as Kotti } from '../node_modules/kotti/dist/Kotti.js';
 import { default as fUtils } from './fUtils/index.js';
 import { default as utils } from './utils.js';
-
+import { default as Momentum } from './Momentum.js';
+import { default as Bounce } from './Bounce.js';
+import { default as AnimatedScroll } from './AnimatedScroll.js';
+import { default as ResizeDebouncer } from './ResizeDebouncer.js';
 
 let defaults = {
   config: {
@@ -20,37 +23,76 @@ let defaults = {
     // are at the same spot and only the locked element should move
     lock: false,
 
-    // speed for animated scrolling, in px/frame
-    maxScrollPxPerFrame: 50,
+    // allow scrolling beyond the edge of moveable
+    overscroll: true,
 
-    // minimum speed for animated scrolling, under which animated scrolling stops
-    minScrollPxPerFrame: 0.2,
+    // maximum amount of pixels for touch-led overscrolling
+    maxTouchOverscroll: 150,
 
-    // the distance in px from the target position, at which animated scroll starts slowing down
-    scrollToSlowingDistance: 300
+    // maximum amount of pixels for momentum-led overscrolling
+    maxMomentumOverscroll: 100,
+
+    // how much time (in msec) it takes to bounce back
+    bounceTime: 500,
+
+    // how much time (in msec) it takes to animate-scroll
+    scrollTime: 500,
+
+    // maximum speed for scrolling, in px/frame
+    maxPxPerFrame: 50,
+
+    // minimum speed for scrolling, under which animated scrolling stops
+    minPxPerFrame: 0.2,
+
+    // minimum overscroll push, under which momentum is stopped
+    minMomentumPush: 1.0,
+
+    // minimum overscroll push multiplier, under which momentum is stopped
+    minMomentumMultiplier: 0.15,
+
+    // when set to true, listens to debounced window.resize events and calls refresh
+    refreshOnResize: true
   },
 
   private: {
-    wegbier: null,
-    boundHandlers: {},
-    axis: ['x', 'y'],
-    position: { x: 0, y: 0 },
-    positionLimits: { x: 0, y: 0},
-    isScrollFrozen: false,
-    animatedScroll: {
-      isAnimatedScrolling: false,
-      pxPerFrame: 0,
-      maxPxPerFrame: 0,
-      direction: {
-        radians: 0,
-        x: 0,         // component weight in x, effectively cos(radians)
-        y: 0          // component weight in y, effectively sin(radians)
+    container: {
+      height: 0,
+      width: 0
+    },
+    // a single abstract moveable is used to represent the combined collection of slides
+    moveable: {
+      height: 0,
+      width: 0,
+      x: 0,
+      y: 0
+    },
+    boundaries: {
+      x: {
+        axisStart: 0,
+        axisEnd: 0
       },
-      startingPosition: { x: 0, y: 0 },
-      targetPosition: { x: 0, y: 0 },
-      totalDistance: 0
-    }
+      y: {
+        axisStart: 0,
+        axisEnd: 0
+      }
+    },
+    // amount of overscroll on each axis, is pixels
+    overscrollPx: {
+      x: 0,
+      y: 0
+    },
+    axis: ['x', 'y'],
+    isBouncingOnAxis: { x: false, y: false },
+    isMomentumOnAxis: { x: false, y: false },
+    isAnimatedScrolling: false,
+    isTouchActive: false
   }
+};
+
+
+let events = {
+  positionChanged: 'mustafas:positionChanged',
+  positionStable: 'mustafas:positionStable'
 };
 
 
@@ -62,47 +104,54 @@ export default class Mustafas {
     if (config) fUtils.mergeDeep(this._config, config);
     this._private.axis = this._config.axis.split('');
 
-    // mustafa needs an actual DOMNode as moveable, whereas wegbier needs an area.
-    let configWegbier = fUtils.cloneDeep(defaults.config);
-    if (config) fUtils.mergeDeep(configWegbier, this._config);
-    configWegbier.moveable = this._getMoveableSize();
+    this.kotti = new Kotti(this._config);
+    this.bounce = new Bounce(this._config);
+    this.momentum = new Momentum(this._config);
+    this.animatedScroll = new AnimatedScroll(this._config);
 
-    this._private.wegbier = new Wegbier(configWegbier);
+    if (this._config.refreshOnResize) this.resizeDebouncer = new ResizeDebouncer();
 
-    this._calculatePositionLimits();
-    this._bindAnimatedScroll();
+    this.events = events;
+    utils.addEventTargetInterface(this);
+
+    this._calculateParams();
     this._bindEvents();
+
+    this._private.boundUpdateElementPositions = this._updateElementPositions.bind(this);
   }
 
 
   // PUBLIC
 
 
-  resize() {
-    this._calculatePositionLimits();
-
-    let configWegbier = { moveable: this._getMoveableSize() };
-    this._private.wegbier.refresh(configWegbier);
+  refresh(config) {
+    if (config) fUtils.mergeDeep(this._config, config);
+    this._calculateParams();
   }
 
 
   getScrollPosition() {
-    return { left: this._private.position.x, top: this._private.position.y };
+    return { left: this._private.moveable.x, top: this._private.moveable.y };
   }
 
 
   scrollTo(left, top, shouldAnimate, scrollSpeed) {
     if (this._private.isScrollFrozen) return;
 
-    if (this._private.animatedScroll.isAnimatedScrolling) {
-      this._stopAnimatedScroll();
+    if (this._private.isAnimatedScrolling) {
+      this.animatedScroll.stopAnimatedScroll();
     }
 
+    let validTargetPosition = this._getNearestValidPosition({ x: left, y: top });
+
     if (shouldAnimate) {
-      this._startAnimatedScroll( { x: left, y: top }, scrollSpeed );
+      // TODO stop any bounce or momentum
+      this.momentum.stopMomentum();
+      this.bounce.stop();
+      this.animatedScroll.startAnimatedScroll(this._private.moveable, validTargetPosition, scrollSpeed);
     }
     else {
-      this._setWegbierPosition( { x: left, y: top } );
+      this._updateCoords(validTargetPosition);
     }
   }
 
@@ -113,84 +162,379 @@ export default class Mustafas {
 
 
   scrollTop(shouldAnimate, scrollSpeed) {
-    this.scrollTo(this._private.position.x, 0, shouldAnimate, scrollSpeed);
+    this.scrollTo(this._private.moveable.x, this._private.boundaries.y.axisStart, shouldAnimate, scrollSpeed);
   }
 
 
   scrollBottom(shouldAnimate, scrollSpeed) {
-    this.scrollTo(this._private.position.x, this._private.positionLimits.y, shouldAnimate, scrollSpeed);
+    this.scrollTo(this._private.moveable.x, this._private.boundaries.y.axisEnd, shouldAnimate, scrollSpeed);
   }
 
 
-  // freezes the scroll on all axes
   freezeScroll(shouldFreeze) {
-    // shouldFreeze is treated as an optional parameter defaulting to true
-    this._private.isScrollFrozen = shouldFreeze === false ? false : true;
+    this.momentum.stopMomentum();
+    this.animatedScroll.stop();
+    this.kotti.setEnabled(!shouldFreeze);
+  }
 
-    if (this._private.isScrollFrozen && this._private.animatedScroll.isAnimatedScrolling) {
-      this._stopAnimatedScroll();
-    }
-    this._private.wegbier.freezeScroll(shouldFreeze);
+
+  getBoundaries() {
+    return fUtils.cloneDeep(this._private.boundaries);
   }
 
 
   destroy() {
     this._unbindEvents();
-    this._private.wegbier.destroy();
+    this.kotti.destroy();
+
+    if (this.resizeDebouncer) this.resizeDebouncer.destroy();
+
     this._config.container = null;
     this._config.moveable = null;
-  };
+  }
 
 
   // LIFECYCLE
 
 
-  _calculatePositionLimits() {
-    let boundaries = this._private.wegbier.getBoundaries();
-    this._private.positionLimits.x = boundaries.x.axisEnd;
-    this._private.positionLimits.y = boundaries.y.axisEnd;
-  }
-
-
-  _getMoveableSize() {
-    return {
-      width: this._config.moveable.clientWidth,
-      height: this._config.moveable.clientHeight
-    };
-  }
-
-
   _bindEvents() {
-    this._private.boundHandlers = {
-      'wegbier:positionChanged': this._onPositionChanged.bind(this)
+    this._private.boundHandlersKotti = {
+      touchStart: this._handleTouchStart.bind(this),
+      touchEnd: this._handleTouchEnd.bind(this),
+      pushBy: this._handlePushBy.bind(this),
+      finishedTouchWithMomentum: this._handleTouchMomentum.bind(this)
     };
 
-    fUtils.forEach(this._private.boundHandlers, (handler, event) => {
-      this._private.wegbier.addEventListener(event, handler);
+    fUtils.forEach(this._private.boundHandlersKotti, (handler, eventType) => {
+      this.kotti.addEventListener(this.kotti.events[eventType], handler);
     });
+
+    this._private.boundHandlersBounce = {
+      bounceStartOnAxis: this._handleBounceStartOnAxis.bind(this),
+      bounceEndOnAxis: this._handleBounceEndOnAxis.bind(this),
+      bounceToPosition: this._handleBounceToPosition.bind(this)
+    };
+
+    fUtils.forEach(this._private.boundHandlersBounce, (handler, eventType) => {
+      this.bounce.addEventListener(this.bounce.events[eventType], handler);
+    });
+
+    this._private.boundHandlersMomentum = {
+      pushBy: this._handlePushBy.bind(this),
+      startOnAxis: this._handleMomentumStartOnAxis.bind(this),
+      stopOnAxis: this._handleMomentumStopOnAxis.bind(this),
+      stop: this._handleMomentumStop.bind(this)
+    };
+
+    fUtils.forEach(this._private.boundHandlersMomentum, (handler, eventType) => {
+      this.momentum.addEventListener(this.momentum.events[eventType], handler);
+    });
+
+    this._private.boundHandlersAnimatedScroll = {
+      start: this._handleAnimatedScrollStart.bind(this),
+      scrollTo: this._handleAnimatedScrollTo.bind(this),
+      stop: this._handleAnimatedScrollStop.bind(this)
+    };
+
+    fUtils.forEach(this._private.boundHandlersAnimatedScroll, (handler, eventType) => {
+      this.animatedScroll.addEventListener(this.animatedScroll.events[eventType], handler);
+    });
+
+    if (this.resizeDebouncer) {
+      this._private.boundHandlerResize = this._handleResize.bind(this);
+      this.resizeDebouncer.addEventListener(this.resizeDebouncer.events.resize, this._private.boundHandlerResize);
+    }
   }
 
 
   _unbindEvents() {
-    fUtils.forEach(this._private.boundHandlers, (handler, event) => {
-      this._private.wegbier.removeEventListener(event, handler);
+    fUtils.forEach(this._private.boundHandlersKotti, (handler, eventType) => {
+      this.kotti.removeEventListener(this.kotti.events[eventType], handler);
+    });
+
+    fUtils.forEach(this._private.boundHandlersBounce, (handler, eventType) => {
+      this.bounce.removeEventListener(this.bounce.events[eventType], handler);
+    });
+
+    fUtils.forEach(this._private.boundHandlersMomentum, (handler, eventType) => {
+      this.momentum.removeEventListener(this.momentum.events[eventType], handler);
+    });
+
+    fUtils.forEach(this._private.boundHandlersAnimatedScroll, (handler, eventType) => {
+      this.animatedScroll.removeEventListener(this.animatedScroll.events[eventType], handler);
+    });
+
+    if (this.resizeDebouncer) {
+      this.resizeDebouncer.removeEventListener(this.resizeDebouncer.events.resize, this._private.boundHandlerResize);
+    }
+  }
+
+
+  // EVENT HANDLERS
+
+
+  _handleResize() {
+    this.refresh();
+  }
+
+
+  _handleTouchStart() {
+    this._private.isTouchActive = true;
+
+    this.bounce.stop();
+    this.momentum.stopMomentum();
+  }
+
+
+  _handleTouchEnd() {
+    this._private.isTouchActive = false;
+    this._checkForBounceStart();
+    this._checkForPositionStable();
+  }
+
+
+  _handleBounceStartOnAxis(event) {
+    this._private.isBouncingOnAxis[event.data.axis] = true;
+  }
+
+
+  _handleBounceEndOnAxis(event) {
+    this._private.isBouncingOnAxis[event.data.axis] = false;
+    this._checkForPositionStable();
+  }
+
+
+  _handleBounceToPosition(event) {
+    this._updateCoords(event.data);
+  }
+
+
+  _handleMomentumStartOnAxis(event) {
+    this._private.isMomentumOnAxis[event.data.axis] = true;
+  }
+
+
+  _handleMomentumStop() {
+    this._checkForPositionStable();
+  }
+
+
+  _handleMomentumStopOnAxis(event) {
+    this._private.isMomentumOnAxis[event.data.axis] = false;
+    this._checkForBounceStartOnAxis(event.data.axis);
+  }
+
+
+  _handleAnimatedScrollStart() {
+    this._private.isAnimatedScrolling = true;
+  }
+
+
+  _handleAnimatedScrollStop() {
+    this._private.isAnimatedScrolling = false;
+    this._checkForPositionStable();
+  }
+
+
+  _handleAnimatedScrollTo(event) {
+    this._updateCoords(event.data);
+  }
+
+
+  _handlePushBy(event) {
+    let pushBy = event.data,
+      newCoordinates = {
+        x: this._private.moveable.x,
+        y: this._private.moveable.y
+      },
+      boundaries = this._private.boundaries;
+
+    this._forXY((xy) => {
+      let pxToAdd = pushBy[xy].px * pushBy[xy].direction,
+        stopMomentum = false;
+
+      // OVERSCROLLING IS ALLOWED
+
+      // the further you overscroll, the smaller is the displacement; we multiply the displacement
+      // by a linear factor of the overscroll distance
+      if (this._config.overscroll) {
+        if (this._private.overscrollPx[xy] > 0) {
+          // for non-touch pushes (i.e. momentum) we use a smaller overscroll maximum, so that the
+          // momentum is reduced (and stopped) earlier. this gets us closer to the iOS behavior
+          let maxOverscroll = this._private.isTouchActive ? this._config.maxTouchOverscroll : this._config.maxMomentumOverscroll,
+            multiplier = utils.easeLinear(this._private.overscrollPx[xy], 1, -1, maxOverscroll);
+
+          pxToAdd *= multiplier;
+
+          // todo remove literal value
+          if (this._private.isMomentumOnAxis[xy]
+            && (multiplier < this._config.minMomentumMultiplier || Math.abs(pxToAdd) < this._config.minMomentumPush)) {
+            this.momentum.stopMomentumOnAxis(xy);
+          }
+        }
+
+        newCoordinates[xy] = this._private.moveable[xy] + pxToAdd;
+      }
+
+      // OVERSCROLLING IS NOT ALLOWED
+
+      else {
+        newCoordinates[xy] = this._private.moveable[xy] + pxToAdd;
+
+        // check on axis start (left or top)
+        if (newCoordinates[xy] > boundaries[xy].axisStart) {
+          newCoordinates[xy] = boundaries[xy].axisStart;
+          stopMomentum = true;
+        }
+        // check on axis end (right or bottom)
+        else if (newCoordinates[xy] < boundaries[xy].axisEnd) {
+          newCoordinates[xy] = boundaries[xy].axisEnd;
+          stopMomentum = true;
+        }
+      }
+
+      if (stopMomentum) this.momentum.stopMomentumOnAxis(xy);
+    });
+
+    this._updateCoords(newCoordinates);
+  }
+
+
+  _handleTouchMomentum(event) {
+    // do not start new momentum when overscrolling
+    if (this._private.overscrollPx.x > 0 || this._private.overscrollPx.y > 0) return;
+
+    this.momentum.startMomentum(event.data);
+  }
+
+
+  // POSITION AND MOVEMENT
+
+
+  _calculateParams() {
+    this._private.container.width = this._config.container.clientWidth;
+    this._private.container.height = this._config.container.clientHeight;
+
+    this._private.moveable.width = this._config.moveable.clientWidth;
+    this._private.moveable.height = this._config.moveable.clientHeight;
+
+    // calculate the maximum and minimum coordinates for scrolling. these are used as boundaries for
+    // determining overscroll status, initiating bounce (if allowed); and also to determine bounce
+    // target position when overscrolling
+    this._forXY((xy) => {
+      let dimension = xy === 'x' ? 'width' : 'height';
+      this._private.boundaries[xy].axisStart = 0;
+      this._private.boundaries[xy].axisEnd = this._private.container[dimension] - this._private.moveable[dimension];
+      // moveable is smaller than container on this axis, the only "stable" position is 0
+      if (this._private.boundaries[xy].axisEnd > 0) this._private.boundaries[xy].axisEnd = 0;
     });
   }
 
 
-  _onPositionChanged(event) {
-    this._private.position.x = event.data.x;
-    this._private.position.y = event.data.y;
-    this._config.moveable.style.webkitTransform = 'translate3d(' + this._private.position.x + 'px, ' + this._private.position.y + 'px, 0px)';
+  _updateCoords(newCoordinates) {
+    this._forXY((xy) => {
+
+      // DEAL WITH OVERSCROLLING
+
+      if (this._config.overscroll) {
+        let overscrollPx = this._private.overscrollPx,
+          boundaries = this._private.boundaries;
+
+
+        // check on axis start (left or top)
+        if (newCoordinates[xy] > boundaries[xy].axisStart) {
+          overscrollPx[xy] = newCoordinates[xy] - boundaries[xy].axisStart;
+        }
+        // check on axis end (right or bottom)
+        else if (newCoordinates[xy] < boundaries[xy].axisEnd) {
+          overscrollPx[xy] = boundaries[xy].axisEnd - newCoordinates[xy];
+        }
+        else {
+          overscrollPx[xy] = 0;
+        }
+      }
+    });
+
+    // APPLY NEW COORDINATES AND DISPATCH EVENT
+
+    if (this._private.moveable.x !== newCoordinates.x || this._private.moveable.y !== newCoordinates.y) {
+      this._private.moveable.x = newCoordinates.x;
+      this._private.moveable.y = newCoordinates.y;
+      requestAnimationFrame(this._private.boundUpdateElementPositions);
+
+      this.dispatchEvent(new Event(events.positionChanged), {
+        position: {
+          x: this._private.moveable.x,
+          y: this._private.moveable.y
+        },
+        percent: {
+          x: this._private.moveable.x / (this._private.moveable.width - this._private.container.width),
+          y: this._private.moveable.y / (this._private.moveable.height - this._private.container.height)
+        }
+      });
+    }
   }
 
 
-  _setWegbierPosition(position) {
-    this._private.wegbier.scrollTo(position);
+  // DOM MANIPULATION
+
+
+  _updateElementPositions() {
+    this._config.moveable.style.webkitTransform = `translate3d(
+        ${this._private.moveable.x}px, ${this._private.moveable.y}px, 0px)`;
+  }
+
+
+  // CONDITION CHECKING
+
+
+  _checkForBounceStart() {
+    this._forXY((xy) => {
+      this._checkForBounceStartOnAxis(xy);
+    });
+  }
+
+
+  _checkForBounceStartOnAxis(axis) {
+    // TODO single-line
+    if (this._private.isTouchActive
+        || this._private.isBouncingOnAxis[axis]
+        || this._private.isMomentumOnAxis[axis]) return;
+
+    if (this._private.moveable[axis] > this._private.boundaries[axis].axisStart) {
+      this.bounce.bounceToTargetOnAxis(axis, this._private.moveable[axis], this._private.boundaries[axis].axisStart);
+    }
+    else if (this._private.moveable[axis] < this._private.boundaries[axis].axisEnd) {
+      this.bounce.bounceToTargetOnAxis(axis, this._private.moveable[axis], this._private.boundaries[axis].axisEnd);
+    }
+  }
+
+
+  _checkForPositionStable() {
+    if (!this._private.isTouchActive
+        && !this._private.isAnimatedScrolling
+        && !this._private.isBouncingOnAxis.x
+        && !this._private.isBouncingOnAxis.y
+        && !this._private.isMomentumOnAxis.x
+        && !this._private.isMomentumOnAxis.y) {
+      this.dispatchEvent(new Event(events.positionStable), {
+        position: {
+          x: this._private.moveable.x,
+          y: this._private.moveable.y
+        },
+        percent: {
+          x: this._private.moveable.x / (this._private.moveable.width - this._private.container.width),
+          y: this._private.moveable.y / (this._private.moveable.height - this._private.container.height)
+        }
+      });
+    }
   }
 
 
   // ANIMATED SCROLLING
+
+
+ /*
 
 
   _bindAnimatedScroll() {
@@ -286,6 +630,7 @@ export default class Mustafas {
 
     cancelAnimationFrame(this._private.currentFrame);
   }
+  */
 
 
   // HELPERS
@@ -307,14 +652,15 @@ export default class Mustafas {
 
 
   _getNearestValidPosition(position) {
-    let result = { x: 0, y: 0 };
+    let result = { x: 0, y: 0 },
+      boundaries = this._private.boundaries;
 
     this._forXY((xy) => {
-      if (position[xy] > 0) {
-        result[xy] = 0;
+      if (position[xy] > boundaries[xy].axisStart) {
+        result[xy] = boundaries[xy].axisStart;
       }
-      else if (position[xy] < this._private.positionLimits[xy]) {
-        result[xy] = this._private.positionLimits[xy];
+      else if (position[xy] < boundaries[xy].axisEnd) {
+        result[xy] = boundaries[xy].axisEnd;
       }
       else {
         result[xy] = position[xy];
