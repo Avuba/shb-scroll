@@ -145,7 +145,6 @@ export default class Mustafas {
     let validTargetPosition = this._getNearestValidPosition({ x: left, y: top });
 
     if (shouldAnimate) {
-      // TODO stop any bounce or momentum
       this.momentum.stopMomentum();
       this.bounce.stop();
       this.animatedScroll.startAnimatedScroll(this._private.moveable, validTargetPosition, scrollSpeed);
@@ -355,8 +354,9 @@ export default class Mustafas {
 
       // OVERSCROLLING IS ALLOWED
 
-      // the further you overscroll, the smaller is the displacement; we multiply the displacement
-      // by a linear factor of the overscroll distance
+      // the further you overscroll, the smaller is the displacement; this is valid for user touch
+      // but also for momentum; we multiply the displacement by a linear factor of the overscroll
+      // distance; the further the overscroll, the smaller the displacement
       if (this._config.overscroll) {
         if (this._private.overscrollPx[xy] > 0) {
           // for non-touch pushes (i.e. momentum) we use a smaller overscroll maximum, so that the
@@ -366,10 +366,11 @@ export default class Mustafas {
 
           pxToAdd *= multiplier;
 
-          // todo remove literal value
+          // if the source of push was momentum, and the multiplier or result are too low, we
+          // stop the momentum so that bounce can kick in
           if (this._private.isMomentumOnAxis[xy]
             && (multiplier < this._config.minMomentumMultiplier || Math.abs(pxToAdd) < this._config.minMomentumPush)) {
-            this.momentum.stopMomentumOnAxis(xy);
+            stopMomentum = true;
           }
         }
 
@@ -496,10 +497,7 @@ export default class Mustafas {
 
 
   _checkForBounceStartOnAxis(axis) {
-    // TODO single-line
-    if (this._private.isTouchActive
-        || this._private.isBouncingOnAxis[axis]
-        || this._private.isMomentumOnAxis[axis]) return;
+    if (this._private.isTouchActive || this._private.isBouncingOnAxis[axis] || this._private.isMomentumOnAxis[axis]) return;
 
     if (this._private.moveable[axis] > this._private.boundaries[axis].axisStart) {
       this.bounce.bounceToTargetOnAxis(axis, this._private.moveable[axis], this._private.boundaries[axis].axisStart);
