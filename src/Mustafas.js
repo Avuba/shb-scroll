@@ -51,7 +51,13 @@ let defaults = {
     minMomentumMultiplier: 0.15,
 
     // when set to true, listens to debounced window.resize events and calls refresh
-    refreshOnResize: true
+    refreshOnResize: true,
+
+    // used to offset the calculated boundaries, which are based on the moveable node's dimensions
+    boundaryOffsets: {
+      x: { axisStart: 0, axisEnd: 0 },
+      y: { axisStart: 0, axisEnd: 0 }
+    }
   },
 
   private: {
@@ -67,20 +73,11 @@ let defaults = {
       y: 0
     },
     boundaries: {
-      x: {
-        axisStart: 0,
-        axisEnd: 0
-      },
-      y: {
-        axisStart: 0,
-        axisEnd: 0
-      }
+      x: { axisStart: 0, axisEnd: 0 },
+      y: { axisStart: 0, axisEnd: 0 }
     },
     // amount of overscroll on each axis, is pixels
-    overscrollPx: {
-      x: 0,
-      y: 0
-    },
+    overscrollPx: { x: 0, y: 0 },
     axis: ['x', 'y'],
     isBouncingOnAxis: { x: false, y: false },
     isMomentumOnAxis: { x: false, y: false },
@@ -447,6 +444,10 @@ export default class Mustafas {
       this._private.boundaries[xy].axisEnd = this._private.container[dimension] - this._private.moveable[dimension];
       // moveable is smaller than container on this axis, the only "stable" position is 0
       if (this._private.boundaries[xy].axisEnd > 0) this._private.boundaries[xy].axisEnd = 0;
+
+      // apply the user-defined offsets
+      this._private.boundaries[xy].axisStart += this._config.boundaryOffsets[xy].axisStart;
+      this._private.boundaries[xy].axisEnd += this._config.boundaryOffsets[xy].axisEnd;
     });
   }
 
