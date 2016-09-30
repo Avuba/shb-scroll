@@ -111,13 +111,16 @@ export default class Mustafas {
 
     if (this._config.refreshOnResize) this.resizeDebouncer = new ResizeDebouncer();
 
+    this._private.boundUpdateElementPositions = this._updateElementPositions.bind(this);
+    this._private.boundCalculateParams = this._calculateParams.bind(this);
+
+    requestAnimationFrame(() =>{
+      this._private.boundCalculateParams();
+    });
+
     this.events = events;
     utils.addEventTargetInterface(this);
-
-    this._calculateParams();
     this._bindEvents();
-
-    this._private.boundUpdateElementPositions = this._updateElementPositions.bind(this);
   }
 
 
@@ -126,12 +129,9 @@ export default class Mustafas {
 
   refresh(config) {
     if (config) fUtils.mergeDeep(this._config, config);
-    this._calculateParams();
-  }
-
-
-  getScrollPosition() {
-    return { left: this._private.moveable.x, top: this._private.moveable.y };
+    requestAnimationFrame(() =>{
+      this._private.boundCalculateParams();
+    });
   }
 
 
@@ -584,4 +584,4 @@ export default class Mustafas {
 
     return result;
   }
-};
+}
