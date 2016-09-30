@@ -488,7 +488,6 @@ export default class Mustafas {
         let boundaryRelativePosition = this._private.moveable[xy] - this._config.boundaryOffsets[xy].axisStart,
           maxRelativePosition = this._private.boundaries[xy].axisEnd - this._private.boundaries[xy].axisStart;
         percent[xy] = boundaryRelativePosition / maxRelativePosition;
-        console.log("pos, max in", xy, boundaryRelativePosition, maxRelativePosition);
       });
 
       this.dispatchEvent(new Event(events.positionChanged), {
@@ -497,10 +496,6 @@ export default class Mustafas {
           y: this._private.moveable.y
         },
         percent: percent
-        // percent: {
-        //   x: this._private.moveable.x / (this._private.moveable.width - this._private.container.width),
-        //   y: this._private.moveable.y / (this._private.moveable.height - this._private.container.height)
-        // }
       });
     }
   }
