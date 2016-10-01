@@ -51,13 +51,7 @@ let defaults = {
     minMomentumMultiplier: 0.15,
 
     // when set to true, listens to debounced window.resize events and calls refresh
-    refreshOnResize: true,
-
-    // used to offset the calculated boundaries, which are based on the moveable node's dimensions
-    boundaryOffsets: {
-      x: { axisStart: 0, axisEnd: 0 },
-      y: { axisStart: 0, axisEnd: 0 }
-    }
+    refreshOnResize: true
   },
 
   private: {
@@ -73,11 +67,20 @@ let defaults = {
       y: 0
     },
     boundaries: {
-      x: { axisStart: 0, axisEnd: 0 },
-      y: { axisStart: 0, axisEnd: 0 }
+      x: {
+        axisStart: 0,
+        axisEnd: 0
+      },
+      y: {
+        axisStart: 0,
+        axisEnd: 0
+      }
     },
     // amount of overscroll on each axis, is pixels
-    overscrollPx: { x: 0, y: 0 },
+    overscrollPx: {
+      x: 0,
+      y: 0
+    },
     axis: ['x', 'y'],
     isBouncingOnAxis: { x: false, y: false },
     isMomentumOnAxis: { x: false, y: false },
@@ -444,10 +447,6 @@ export default class Mustafas {
       this._private.boundaries[xy].axisEnd = this._private.container[dimension] - this._private.moveable[dimension];
       // moveable is smaller than container on this axis, the only "stable" position is 0
       if (this._private.boundaries[xy].axisEnd > 0) this._private.boundaries[xy].axisEnd = 0;
-
-      // apply the user-defined offsets
-      this._private.boundaries[xy].axisStart += this._config.boundaryOffsets[xy].axisStart;
-      this._private.boundaries[xy].axisEnd += this._config.boundaryOffsets[xy].axisEnd;
     });
   }
 
@@ -483,19 +482,15 @@ export default class Mustafas {
       this._private.moveable.y = newCoordinates.y;
       requestAnimationFrame(this._private.boundUpdateElementPositions);
 
-      let percent = { x: 0, y: 0 };
-      this._forXY((xy) => {
-        let boundaryRelativePosition = this._private.moveable[xy] - this._config.boundaryOffsets[xy].axisStart,
-          maxRelativePosition = this._private.boundaries[xy].axisEnd - this._private.boundaries[xy].axisStart;
-        percent[xy] = boundaryRelativePosition / maxRelativePosition;
-      });
-
       this.dispatchEvent(new Event(events.positionChanged), {
         position: {
           x: this._private.moveable.x,
           y: this._private.moveable.y
         },
-        percent: percent
+        percent: {
+          x: this._private.moveable.x / (this._private.moveable.width - this._private.container.width),
+          y: this._private.moveable.y / (this._private.moveable.height - this._private.container.height)
+        }
       });
     }
   }
