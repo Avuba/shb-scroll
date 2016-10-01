@@ -524,7 +524,7 @@ export default class Mustafas {
   // DONE
   _updateElementPositions() {
     this._config.moveable.style.webkitTransform = `translate3d(
-        -${this._private.position.px.x}px, -${this._private.position.px.y}px, 0px)`;
+        ${-this._private.position.px.x}px, ${-this._private.position.px.y}px, 0px)`;
   }
 
 
