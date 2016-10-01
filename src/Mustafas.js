@@ -118,9 +118,7 @@ export default class Mustafas {
     this._private.boundUpdateElementPositions = this._updateElementPositions.bind(this);
     this._private.boundCalculateParams = this._calculateParams.bind(this);
 
-    requestAnimationFrame(() =>{
-      this._private.boundCalculateParams();
-    });
+    requestAnimationFrame(this._private.boundCalculateParams);
 
     this.events = events;
     utils.addEventTargetInterface(this);
@@ -133,9 +131,7 @@ export default class Mustafas {
 
   refresh(config) {
     if (config) fUtils.mergeDeep(this._config, config);
-    requestAnimationFrame(() =>{
-      this._private.boundCalculateParams();
-    });
+    requestAnimationFrame(this._private.boundCalculateParams);
   }
 
 
