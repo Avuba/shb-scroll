@@ -63,15 +63,7 @@ let defaults = {
     // an abstract moveable is used for calculations and bookkeeping
     moveable: {
       height: 0,
-      width: 0,
-      x: 0,
-      y: 0,
-      padding: {
-        left: 0,
-        top: 0,
-        right: 0,
-        bottom: 0
-      },
+      width: 0
     },
     boundaries: {
       x: {
@@ -87,6 +79,11 @@ let defaults = {
     overscrollPx: {
       x: 0,
       y: 0
+    },
+    // the current position, relative to the upper-left corner of the moveable
+    position: {
+      px: { x: 0, y: 0 },
+      percent: { x: 0, y: 0 }
     },
     axis: ['x', 'y'],
     isBouncingOnAxis: { x: false, y: false },
@@ -147,6 +144,7 @@ export default class Mustafas {
   }
 
 
+  // DONE
   scrollToPercentile(left, top, shouldAnimate, scrollSpeed) {
     let percentile = { x: left, y: top },
       range = { x: 0, y: 0 },
@@ -154,13 +152,14 @@ export default class Mustafas {
 
     this._forXY((xy) => {
       range[xy] = this._private.boundaries[xy].axisEnd - this._private.boundaries[xy].axisStart;
-      position[xy] = this._private.boundaries[xy].axisStart - (range[xy] * percentile[xy]);
+      position[xy] = this._private.boundaries[xy].axisStart + (range[xy] * percentile[xy]);
     });
 
     this.scrollTo(position.x, position.y, shouldAnimate, scrollSpeed);
   }
 
 
+  // DONE
   scrollTo(left, top, shouldAnimate, scrollSpeed) {
     if (this._private.isScrollFrozen) return;
 
@@ -173,7 +172,7 @@ export default class Mustafas {
     if (shouldAnimate) {
       this.momentum.stopMomentum();
       this.bounce.stop();
-      this.animatedScroll.startAnimatedScroll(this._private.moveable, validTargetPosition, scrollSpeed);
+      this.animatedScroll.startAnimatedScroll(this._private.position.px, validTargetPosition, scrollSpeed);
     }
     else {
       this._updateCoords(validTargetPosition);
@@ -181,18 +180,21 @@ export default class Mustafas {
   }
 
 
+  // DONE
   scrollBy(left, top, shouldAnimate, scrollSpeed) {
-    this.scrollTo(this._private.position.x +left, this._private.position.x +top, shouldAnimate, scrollSpeed);
+    this.scrollTo(this._private.position.px.x +left, this._private.position.px.y +top, shouldAnimate, scrollSpeed);
   }
 
 
+  // DONE
   scrollTop(shouldAnimate, scrollSpeed) {
-    this.scrollTo(this._private.moveable.x, this._private.boundaries.y.axisStart, shouldAnimate, scrollSpeed);
+    this.scrollTo(this._private.position.px.x, this._private.boundaries.y.axisStart, shouldAnimate, scrollSpeed);
   }
 
 
+  // DONE
   scrollBottom(shouldAnimate, scrollSpeed) {
-    this.scrollTo(this._private.moveable.x, this._private.boundaries.y.axisEnd, shouldAnimate, scrollSpeed);
+    this.scrollTo(this._private.position.px.x, this._private.boundaries.y.axisEnd, shouldAnimate, scrollSpeed);
   }
 
 
@@ -200,11 +202,6 @@ export default class Mustafas {
     this.momentum.stopMomentum();
     this.animatedScroll.stop();
     this.kotti.setEnabled(!shouldFreeze);
-  }
-
-
-  getBoundaries() {
-    return fUtils.cloneDeep(this._private.boundaries);
   }
 
 
@@ -366,6 +363,7 @@ export default class Mustafas {
   }
 
 
+  // DONE
   _handlePushBy(event) {
     let pushBy = event.data,
       newCoordinates = {
@@ -375,7 +373,8 @@ export default class Mustafas {
       boundaries = this._private.boundaries;
 
     this._forXY((xy) => {
-      let pxToAdd = pushBy[xy].px * pushBy[xy].direction,
+      // direction obtained from kotti is opposite to how we keep coordinates
+      let pxToAdd = pushBy[xy].px * (-pushBy[xy].direction),
         stopMomentum = false;
 
       // OVERSCROLLING IS ALLOWED
@@ -400,21 +399,21 @@ export default class Mustafas {
           }
         }
 
-        newCoordinates[xy] = this._private.moveable[xy] + pxToAdd;
+        newCoordinates[xy] = this._private.position.px[xy] + pxToAdd;
       }
 
       // OVERSCROLLING IS NOT ALLOWED
 
       else {
-        newCoordinates[xy] = this._private.moveable[xy] + pxToAdd;
+        newCoordinates[xy] = this._private.position.px[xy] + pxToAdd;
 
         // check on axis start (left or top)
-        if (newCoordinates[xy] > boundaries[xy].axisStart) {
+        if (newCoordinates[xy] < boundaries[xy].axisStart) {
           newCoordinates[xy] = boundaries[xy].axisStart;
           stopMomentum = true;
         }
         // check on axis end (right or bottom)
-        else if (newCoordinates[xy] < boundaries[xy].axisEnd) {
+        else if (newCoordinates[xy] > boundaries[xy].axisEnd) {
           newCoordinates[xy] = boundaries[xy].axisEnd;
           stopMomentum = true;
         }
@@ -438,38 +437,36 @@ export default class Mustafas {
   // POSITION AND MOVEMENT
 
 
+  // DONE
   _calculateParams() {
     let configMoveable =  this._config.moveable,
       configContainer = this._config.container,
       moveable = this._private.moveable,
-      container = this._private.container;
+      container = this._private.container,
+      boundaries = this._private.boundaries;
 
     container.width = configContainer.clientWidth;
     container.height = configContainer.clientHeight;
 
+    // client dimensions already take padding into account
     moveable.width = configMoveable.clientWidth;
     moveable.height = configMoveable.clientHeight;
-
-    moveable.padding.left = this._getComputedStyleAsNumber(configMoveable, 'padding-left');
-    moveable.padding.right = this._getComputedStyleAsNumber(configMoveable, 'padding-right');
-    moveable.padding.top = this._getComputedStyleAsNumber(configMoveable, 'padding-top');
-    moveable.padding.bottom = this._getComputedStyleAsNumber(configMoveable, 'padding-bottom');
-
-    console.log("TDBG padding", moveable.padding);
 
     // calculate the maximum and minimum coordinates for scrolling. these are used as boundaries for
     // determining overscroll status, initiating bounce (if allowed); and also to determine bounce
     // target position when overscrolling
     this._forXY((xy) => {
       let dimension = xy === 'x' ? 'width' : 'height';
-      this._private.boundaries[xy].axisStart = 0;
-      this._private.boundaries[xy].axisEnd = this._private.container[dimension] - this._private.moveable[dimension];
+
+      boundaries[xy].axisStart = 0;
+      boundaries[xy].axisEnd = moveable[dimension] - container[dimension];
       // moveable is smaller than container on this axis, the only "stable" position is 0
-      if (this._private.boundaries[xy].axisEnd > 0) this._private.boundaries[xy].axisEnd = 0;
+      if (boundaries[xy].axisEnd < 0) boundaries[xy].axisEnd = 0;
     });
   }
 
 
+  // DONE
   _updateCoords(newCoordinates) {
     this._forXY((xy) => {
 
@@ -481,12 +478,12 @@ export default class Mustafas {
 
 
         // check on axis start (left or top)
-        if (newCoordinates[xy] > boundaries[xy].axisStart) {
-          overscrollPx[xy] = newCoordinates[xy] - boundaries[xy].axisStart;
+        if (newCoordinates[xy] < boundaries[xy].axisStart) {
+          overscrollPx[xy] = boundaries[xy].axisStart - newCoordinates[xy];
         }
         // check on axis end (right or bottom)
-        else if (newCoordinates[xy] < boundaries[xy].axisEnd) {
-          overscrollPx[xy] = boundaries[xy].axisEnd - newCoordinates[xy];
+        else if (newCoordinates[xy] > boundaries[xy].axisEnd) {
+          overscrollPx[xy] = newCoordinates[xy] - boundaries[xy].axisEnd;
         }
         else {
           overscrollPx[xy] = 0;
@@ -496,19 +493,25 @@ export default class Mustafas {
 
     // APPLY NEW COORDINATES AND DISPATCH EVENT
 
-    if (this._private.moveable.x !== newCoordinates.x || this._private.moveable.y !== newCoordinates.y) {
-      this._private.moveable.x = newCoordinates.x;
-      this._private.moveable.y = newCoordinates.y;
+    let position = this._private.position;
+
+    if (position.px.x !== newCoordinates.x || position.px.y !== newCoordinates.y) {
+      this._forXY((xy) => {
+        position.px[xy] = newCoordinates[xy];
+        if (this._private.boundaries[xy].axisEnd > 0) {
+          position.percent[xy] = position.px[xy] / this._private.boundaries[xy].axisEnd;
+        }
+      });
       requestAnimationFrame(this._private.boundUpdateElementPositions);
 
       this.dispatchEvent(new Event(events.positionChanged), {
         position: {
-          x: this._private.moveable.x,
-          y: this._private.moveable.y
+          x: position.px.x,
+          y: position.px.y
         },
         percent: {
-          x: this._private.moveable.x / (this._private.moveable.width - this._private.container.width),
-          y: this._private.moveable.y / (this._private.moveable.height - this._private.container.height)
+          x: position.percent.x,
+          y: position.percent.y
         }
       });
     }
@@ -518,9 +521,10 @@ export default class Mustafas {
   // DOM MANIPULATION
 
 
+  // DONE
   _updateElementPositions() {
     this._config.moveable.style.webkitTransform = `translate3d(
-        ${this._private.moveable.x}px, ${this._private.moveable.y}px, 0px)`;
+        -${this._private.position.px.x}px, -${this._private.position.px.y}px, 0px)`;
   }
 
 
@@ -534,18 +538,20 @@ export default class Mustafas {
   }
 
 
+  // DONE
   _checkForBounceStartOnAxis(axis) {
     if (this._private.isTouchActive || this._private.isBouncingOnAxis[axis] || this._private.isMomentumOnAxis[axis]) return;
 
-    if (this._private.moveable[axis] > this._private.boundaries[axis].axisStart) {
-      this.bounce.bounceToTargetOnAxis(axis, this._private.moveable[axis], this._private.boundaries[axis].axisStart);
+    if (this._private.position.px[axis] < this._private.boundaries[axis].axisStart) {
+      this.bounce.bounceToTargetOnAxis(axis, this._private.position.px[axis], this._private.boundaries[axis].axisStart);
     }
-    else if (this._private.moveable[axis] < this._private.boundaries[axis].axisEnd) {
-      this.bounce.bounceToTargetOnAxis(axis, this._private.moveable[axis], this._private.boundaries[axis].axisEnd);
+    else if (this._private.position.px[axis] > this._private.boundaries[axis].axisEnd) {
+      this.bounce.bounceToTargetOnAxis(axis, this._private.position.px[axis], this._private.boundaries[axis].axisEnd);
     }
   }
 
 
+  // DONE
   _checkForPositionStable() {
     if (!this._private.isTouchActive
         && !this._private.isAnimatedScrolling
@@ -553,14 +559,17 @@ export default class Mustafas {
         && !this._private.isBouncingOnAxis.y
         && !this._private.isMomentumOnAxis.x
         && !this._private.isMomentumOnAxis.y) {
+
+      let position = this._private.position;
+
       this.dispatchEvent(new Event(events.positionStable), {
         position: {
-          x: this._private.moveable.x,
-          y: this._private.moveable.y
+          x: position.px.x,
+          y: position.px.y
         },
         percent: {
-          x: this._private.moveable.x / (this._private.moveable.width - this._private.container.width),
-          y: this._private.moveable.y / (this._private.moveable.height - this._private.container.height)
+          x: position.percent.x,
+          y: position.percent.y
         }
       });
     }
@@ -571,12 +580,7 @@ export default class Mustafas {
 
 
   _getPositionDistance(pos1, pos2) {
-    return this._distance(pos1.x, pos1.y, pos2.x, pos2.y);
-  }
-
-
-  _distance(x1, y1, x2, y2) {
-    return Math.sqrt( (x2 -= x1)*x2 + (y2 -= y1)*y2 );
+    return Math.sqrt( (pos2.x - pos1.x) * (pos2.x - pos1.x) + (pos2.y - pos1.y) * (pos2.y - pos1.y) );
   }
 
 
@@ -585,15 +589,16 @@ export default class Mustafas {
   }
 
 
+  // DONE
   _getNearestValidPosition(position) {
     let result = { x: 0, y: 0 },
       boundaries = this._private.boundaries;
 
     this._forXY((xy) => {
-      if (position[xy] > boundaries[xy].axisStart) {
+      if (position[xy] < boundaries[xy].axisStart) {
         result[xy] = boundaries[xy].axisStart;
       }
-      else if (position[xy] < boundaries[xy].axisEnd) {
+      else if (position[xy] > boundaries[xy].axisEnd) {
         result[xy] = boundaries[xy].axisEnd;
       }
       else {
@@ -602,9 +607,5 @@ export default class Mustafas {
     });
 
     return result;
-  }
-
-  _getComputedStyleAsNumber(element, property) {
-    return parseInt(window.getComputedStyle(element, null).getPropertyValue(property));
   }
 }
