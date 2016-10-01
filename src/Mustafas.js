@@ -111,13 +111,16 @@ export default class Mustafas {
 
     if (this._config.refreshOnResize) this.resizeDebouncer = new ResizeDebouncer();
 
+    this._private.boundUpdateElementPositions = this._updateElementPositions.bind(this);
+    this._private.boundCalculateParams = this._calculateParams.bind(this);
+
+    requestAnimationFrame(() =>{
+      this._private.boundCalculateParams();
+    });
+
     this.events = events;
     utils.addEventTargetInterface(this);
-
-    this._calculateParams();
     this._bindEvents();
-
-    this._private.boundUpdateElementPositions = this._updateElementPositions.bind(this);
   }
 
 
@@ -126,12 +129,28 @@ export default class Mustafas {
 
   refresh(config) {
     if (config) fUtils.mergeDeep(this._config, config);
-    this._calculateParams();
+    requestAnimationFrame(() =>{
+      this._private.boundCalculateParams();
+    });
   }
 
 
-  getScrollPosition() {
-    return { left: this._private.moveable.x, top: this._private.moveable.y };
+  setPositionPercentile(positionPercentile) {
+    this.scrollToPercentile(positionPercentile, positionPercentile);
+  }
+
+
+  scrollToPercentile(left, top, shouldAnimate, scrollSpeed) {
+    let percentile = { x: left, y: top },
+      range = { x: 0, y: 0 },
+      position = { x: 0, y: 0 };
+
+    this._forXY((xy) => {
+      range[xy] = this._private.boundaries[xy].axisEnd - this._private.boundaries[xy].axisStart;
+      position[xy] = this._private.boundaries[xy].axisStart - (range[xy] * percentile[xy]);
+    });
+
+    this.scrollTo(position.x, position.y, shouldAnimate, scrollSpeed);
   }
 
 
@@ -529,108 +548,6 @@ export default class Mustafas {
   }
 
 
-  // ANIMATED SCROLLING
-
-
- /*
-
-
-  _bindAnimatedScroll() {
-    this._private.boundAnimatedScroll = this._runAnimatedScroll.bind(this);
-  }
-
-
-  _startAnimatedScroll(targetPosition, scrollSpeed) {
-    let animatedScroll = this._private.animatedScroll;
-
-    cancelAnimationFrame(this._private.currentFrame);
-
-    // SET STARTING POSITION AND VALID TARGET
-
-    animatedScroll.startingPosition = {
-      x: this._private.position.x,
-      y: this._private.position.y
-    };
-
-    animatedScroll.targetPosition = {
-      x: this._private.position.x,
-      y: this._private.position.y
-    };
-
-    let validTargetPosition = this._getNearestValidPosition(targetPosition);
-
-    // only set a target position for axes on which scrolling is enabled.
-    // otherwise, tarhet position remains the same as current position.
-    this._forXY((xy) => {
-      animatedScroll.targetPosition[xy] = validTargetPosition[xy];
-    });
-
-    animatedScroll.totalDistance = this._getPositionDistance(
-      animatedScroll.startingPosition,
-      animatedScroll.targetPosition
-    );
-
-    // CALCULATE SCROLL DIRECTION
-
-    let distance = { x: 0, y: 0 };
-
-    this._forXY((xy) => {
-      distance[xy] = animatedScroll.targetPosition[xy] - animatedScroll.startingPosition[xy];
-    });
-
-    animatedScroll.direction.radians = Math.atan2(distance.y, distance.x);
-    animatedScroll.direction.x = Math.cos(animatedScroll.direction.radians);
-    animatedScroll.direction.y = Math.sin(animatedScroll.direction.radians);
-
-    // SET SPEED AND START ANIMATING
-
-    animatedScroll.maxPxPerFrame = scrollSpeed > 0 ? scrollSpeed : this._config.maxScrollPxPerFrame;
-    // set the current scrolling speed to the maximum speed; speed will decrease as the moveable
-    // nears its target position
-    animatedScroll.pxPerFrame = animatedScroll.maxPxPerFrame;
-    animatedScroll.isAnimatedScrolling = true;
-
-    this._private.currentFrame = requestAnimationFrame(this._private.boundAnimatedScroll);
-  }
-
-
-  _runAnimatedScroll() {
-    let animatedScroll = this._private.animatedScroll,
-      distanceToTarget = this._getPositionDistance(this._private.position, animatedScroll.targetPosition);
-
-    // slow down when close to target
-    if (distanceToTarget < this._config.scrollToSlowingDistance) {
-      animatedScroll.pxPerFrame = animatedScroll.maxPxPerFrame * (distanceToTarget/this._config.scrollToSlowingDistance);
-    }
-
-    // stop when on target
-    if (distanceToTarget < 1 || animatedScroll.pxPerFrame < this._config.minScrollPxPerFrame) {
-        this._stopAnimatedScroll();
-        this._setWegbierPosition(animatedScroll.targetPosition);
-    }
-    // otherwise move towards target
-    else {
-      this._forXY((xy) => {
-        this._private.position[xy] += animatedScroll.pxPerFrame * animatedScroll.direction[xy];
-      });
-      this._setWegbierPosition(this._private.position);
-
-      this._private.currentFrame = requestAnimationFrame(this._private.boundAnimatedScroll);
-    }
-  }
-
-
-  _stopAnimatedScroll() {
-    let animatedScroll = this._private.animatedScroll;
-
-    animatedScroll.pxPerFrame = 0;
-    animatedScroll.isAnimatedScrolling = false;
-
-    cancelAnimationFrame(this._private.currentFrame);
-  }
-  */
-
-
   // HELPERS
 
 
@@ -667,4 +584,4 @@ export default class Mustafas {
 
     return result;
   }
-};
+}
