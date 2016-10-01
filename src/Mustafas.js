@@ -140,7 +140,6 @@ export default class Mustafas {
   }
 
 
-  // DONE
   scrollToPercentile(left, top, shouldAnimate, scrollSpeed) {
     let percentile = { x: left, y: top },
       range = { x: 0, y: 0 },
@@ -155,7 +154,6 @@ export default class Mustafas {
   }
 
 
-  // DONE
   scrollTo(left, top, shouldAnimate, scrollSpeed) {
     if (this._private.isScrollFrozen) return;
 
@@ -176,19 +174,16 @@ export default class Mustafas {
   }
 
 
-  // DONE
   scrollBy(left, top, shouldAnimate, scrollSpeed) {
     this.scrollTo(this._private.position.px.x +left, this._private.position.px.y +top, shouldAnimate, scrollSpeed);
   }
 
 
-  // DONE
   scrollTop(shouldAnimate, scrollSpeed) {
     this.scrollTo(this._private.position.px.x, this._private.boundaries.y.axisStart, shouldAnimate, scrollSpeed);
   }
 
 
-  // DONE
   scrollBottom(shouldAnimate, scrollSpeed) {
     this.scrollTo(this._private.position.px.x, this._private.boundaries.y.axisEnd, shouldAnimate, scrollSpeed);
   }
@@ -359,7 +354,6 @@ export default class Mustafas {
   }
 
 
-  // DONE
   _handlePushBy(event) {
     let pushBy = event.data,
       newCoordinates = {
@@ -433,7 +427,6 @@ export default class Mustafas {
   // POSITION AND MOVEMENT
 
 
-  // DONE
   _calculateParams() {
     let configMoveable =  this._config.moveable,
       configContainer = this._config.container,
@@ -462,7 +455,6 @@ export default class Mustafas {
   }
 
 
-  // DONE
   _updateCoords(newCoordinates) {
     this._forXY((xy) => {
 
@@ -517,7 +509,6 @@ export default class Mustafas {
   // DOM MANIPULATION
 
 
-  // DONE
   _updateElementPositions() {
     this._config.moveable.style.webkitTransform = `translate3d(
         ${-this._private.position.px.x}px, ${-this._private.position.px.y}px, 0px)`;
@@ -534,7 +525,6 @@ export default class Mustafas {
   }
 
 
-  // DONE
   _checkForBounceStartOnAxis(axis) {
     if (this._private.isTouchActive || this._private.isBouncingOnAxis[axis] || this._private.isMomentumOnAxis[axis]) return;
 
@@ -547,7 +537,6 @@ export default class Mustafas {
   }
 
 
-  // DONE
   _checkForPositionStable() {
     if (!this._private.isTouchActive
         && !this._private.isAnimatedScrolling
@@ -585,7 +574,6 @@ export default class Mustafas {
   }
 
 
-  // DONE
   _getNearestValidPosition(position) {
     let result = { x: 0, y: 0 },
       boundaries = this._private.boundaries;
