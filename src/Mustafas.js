@@ -55,16 +55,23 @@ let defaults = {
   },
 
   private: {
+    // an abstract container is used for calculations and bookkeeping
     container: {
       height: 0,
       width: 0
     },
-    // a single abstract moveable is used to represent the combined collection of slides
+    // an abstract moveable is used for calculations and bookkeeping
     moveable: {
       height: 0,
       width: 0,
       x: 0,
-      y: 0
+      y: 0,
+      padding: {
+        left: 0,
+        top: 0,
+        right: 0,
+        bottom: 0
+      },
     },
     boundaries: {
       x: {
@@ -432,11 +439,23 @@ export default class Mustafas {
 
 
   _calculateParams() {
-    this._private.container.width = this._config.container.clientWidth;
-    this._private.container.height = this._config.container.clientHeight;
+    let configMoveable =  this._config.moveable,
+      configContainer = this._config.container,
+      moveable = this._private.moveable,
+      container = this._private.container;
 
-    this._private.moveable.width = this._config.moveable.clientWidth;
-    this._private.moveable.height = this._config.moveable.clientHeight;
+    container.width = configContainer.clientWidth;
+    container.height = configContainer.clientHeight;
+
+    moveable.width = configMoveable.clientWidth;
+    moveable.height = configMoveable.clientHeight;
+
+    moveable.padding.left = this._getComputedStyleAsNumber(configMoveable, 'padding-left');
+    moveable.padding.right = this._getComputedStyleAsNumber(configMoveable, 'padding-right');
+    moveable.padding.top = this._getComputedStyleAsNumber(configMoveable, 'padding-top');
+    moveable.padding.bottom = this._getComputedStyleAsNumber(configMoveable, 'padding-bottom');
+
+    console.log("TDBG padding", moveable.padding);
 
     // calculate the maximum and minimum coordinates for scrolling. these are used as boundaries for
     // determining overscroll status, initiating bounce (if allowed); and also to determine bounce
@@ -583,5 +602,9 @@ export default class Mustafas {
     });
 
     return result;
+  }
+
+  _getComputedStyleAsNumber(element, property) {
+    return parseInt(window.getComputedStyle(element, null).getPropertyValue(property));
   }
 }
