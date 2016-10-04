@@ -157,15 +157,13 @@ export default class Mustafas {
   scrollTo(left, top, shouldAnimate, scrollSpeed) {
     if (this._private.isScrollFrozen) return;
 
-    if (this._private.isAnimatedScrolling) {
-      this.animatedScroll.stopAnimatedScroll();
-    }
+    this.animatedScroll.stopAnimatedScroll();
+    this.momentum.stopMomentum();
+    this.bounce.stop();
 
     let validTargetPosition = this._getNearestValidPosition({ x: left, y: top });
 
     if (shouldAnimate) {
-      this.momentum.stopMomentum();
-      this.bounce.stop();
       this.animatedScroll.startAnimatedScroll(this._private.position.px, validTargetPosition, scrollSpeed);
     }
     else {
