@@ -1,13 +1,13 @@
 {
   "name": "mustafas",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "a standalone, lightweight scrollable list",
   "scripts": {
     "build": "webpack --mode=build",
     "start": "webpack-dev-server --inline --mode=dev --host=0.0.0.0 --port=8080"
   },
   "dependencies": {
-    "kotti": "^0.0.10"
+    "kotti": "^0.0.11"
   },
   "devDependencies": {
     "babel": "^6.5.2",
