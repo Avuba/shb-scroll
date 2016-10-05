@@ -361,8 +361,8 @@ export default class Mustafas {
   _handlePushBy(event) {
     let pushBy = event.data,
       newCoordinates = {
-        x: this._private.moveable.x,
-        y: this._private.moveable.y
+        x: this._private.position.x.px,
+        y: this._private.position.x.px
       },
       boundaries = this._private.boundaries;
 

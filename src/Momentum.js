@@ -44,7 +44,7 @@ export default class Momentum {
     if (config) fUtils.mergeDeep(this._config, config);
     this._private.axis = this._config.axis.split('');
 
-    this._bindMomentum();
+    this._private.boundMomentum = this._runMomentum.bind(this);
 
     this.events = events;
     utils.addEventTargetInterface(this);
@@ -107,11 +107,6 @@ export default class Momentum {
   // LIFECYCLE
 
 
-  _bindMomentum() {
-    this._private.boundMomentum = this._runMomentum.bind(this);
-  }
-
-
   _runMomentum() {
     let pushBy = {
       x: { direction: 0, px: 0 },
@@ -119,17 +114,17 @@ export default class Momentum {
     };
 
     this._forXY((xy) => {
-      if (!this._private.isActive.x && !this._private.isActive.y) return; {
-        if (this._private.currentMomentum[xy].pxPerFrame >= this._config.minPxPerFrame) {
-          pushBy[xy].direction = this._private.currentMomentum[xy].direction;
-          pushBy[xy].px = this._private.currentMomentum[xy].pxPerFrame;
+      // while the amount of momentum is meaningful on this axis, compose the pushBy event data
+      // and decrease the momentum
+      if (this._private.currentMomentum[xy].pxPerFrame >= this._config.minPxPerFrame) {
+        pushBy[xy].direction = this._private.currentMomentum[xy].direction;
+        pushBy[xy].px = this._private.currentMomentum[xy].pxPerFrame;
 
-          // decrease pxPerFrame to decrease scroll speed
-          this._private.currentMomentum[xy].pxPerFrame -= this._config.subtractMomentumPerFrame;
-        }
-        else {
-          this.stopMomentumOnAxis(xy);
-        }
+        // decrease pxPerFrame to decrease scroll speed
+        this._private.currentMomentum[xy].pxPerFrame -= this._config.subtractMomentumPerFrame;
+      }
+      else {
+        this.stopMomentumOnAxis(xy);
       }
     });
 

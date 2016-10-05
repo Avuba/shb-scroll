@@ -38,7 +38,7 @@ export default class AnimatedScroll {
     if (config) fUtils.mergeDeep(this._config, config);
     this._private.axis = this._config.axis.split('');
 
-    this._bindAnimatedScroll();
+    this._private.boundAnimatedScroll = this._runAnimatedScroll.bind(this);
 
     this.events = events;
     utils.addEventTargetInterface(this);
@@ -85,7 +85,6 @@ export default class AnimatedScroll {
     this._private.direction.radians = Math.atan2(distance.y, distance.x);
     this._private.direction.x = Math.cos(this._private.direction.radians);
     this._private.direction.y = Math.sin(this._private.direction.radians);
-    console.log("TDBG direction", this._private.direction);
 
     // SET SPEED AND START ANIMATING
 
@@ -113,11 +112,6 @@ export default class AnimatedScroll {
 
 
   // LIFECYCLE
-
-
-  _bindAnimatedScroll() {
-    this._private.boundAnimatedScroll = this._runAnimatedScroll.bind(this);
-  }
 
 
   _runAnimatedScroll() {
