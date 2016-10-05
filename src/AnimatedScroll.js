@@ -85,6 +85,7 @@ export default class AnimatedScroll {
     this._private.direction.radians = Math.atan2(distance.y, distance.x);
     this._private.direction.x = Math.cos(this._private.direction.radians);
     this._private.direction.y = Math.sin(this._private.direction.radians);
+    console.log("TDBG direction", this._private.direction);
 
     // SET SPEED AND START ANIMATING
 
@@ -132,21 +133,21 @@ export default class AnimatedScroll {
       passedTargetY = false;
 
     if (this._private.direction.x > 0) {
-      passedTargetX = this._private.currentPosition.x > this._private.targetPosition.x;
+      passedTargetX = this._private.currentPosition.x - this._private.targetPosition.x > 0.5;
     }
     else {
-      passedTargetX = this._private.currentPosition.x < this._private.targetPosition.x;
+      passedTargetX = this._private.currentPosition.x - this._private.targetPosition.x < 0.5;
     }
 
     if (this._private.direction.y > 0) {
-      passedTargetY = this._private.currentPosition.y > this._private.targetPosition.y;
+      passedTargetY = this._private.currentPosition.y - this._private.targetPosition.y > 0.5;
     }
     else {
-      passedTargetY = this._private.currentPosition.y < this._private.targetPosition.y;
+      passedTargetY = this._private.currentPosition.y - this._private.targetPosition.y < 0.5;
     }
 
     // stop when on target
-    if (distanceToTarget < 1 || this._private.pxPerFrame < this._config.minScrollPxPerFrame || passedTargetX || passedTargetY) {
+    if (distanceToTarget < 1 || this._private.pxPerFrame < this._config.minPxPerFrame || passedTargetX || passedTargetY) {
       this._private.currentPosition.x += this._private.targetPosition.x;
       this._private.currentPosition.y += this._private.targetPosition.y;
 

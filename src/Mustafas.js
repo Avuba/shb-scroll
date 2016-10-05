@@ -82,8 +82,14 @@ let defaults = {
     },
     // the current position, relative to the upper-left corner of the moveable
     position: {
-      px: { x: 0, y: 0 },
-      percent: { x: 0, y: 0 }
+      x: {
+        px: 0,
+        percent: 0
+      },
+      y: {
+        px: 0,
+        percent: 0
+      }
     },
     axis: ['x', 'y'],
     isBouncingOnAxis: { x: false, y: false },
@@ -164,7 +170,7 @@ export default class Mustafas {
     let validTargetPosition = this._getNearestValidPosition({ x: left, y: top });
 
     if (shouldAnimate) {
-      this.animatedScroll.startAnimatedScroll(this._private.position.px, validTargetPosition, scrollSpeed);
+      this.animatedScroll.startAnimatedScroll({ x: this._private.position.x.px, y: this._private.position.y.px }, validTargetPosition, scrollSpeed);
     }
     else {
       this._updateCoords(validTargetPosition);
@@ -173,17 +179,17 @@ export default class Mustafas {
 
 
   scrollBy(left, top, shouldAnimate, scrollSpeed) {
-    this.scrollTo(this._private.position.px.x +left, this._private.position.px.y +top, shouldAnimate, scrollSpeed);
+    this.scrollTo(this._private.position.x.px +left, this._private.position.y.px +top, shouldAnimate, scrollSpeed);
   }
 
 
   scrollTop(shouldAnimate, scrollSpeed) {
-    this.scrollTo(this._private.position.px.x, this._private.boundaries.y.axisStart, shouldAnimate, scrollSpeed);
+    this.scrollTo(this._private.position.x.px, this._private.boundaries.y.axisStart, shouldAnimate, scrollSpeed);
   }
 
 
   scrollBottom(shouldAnimate, scrollSpeed) {
-    this.scrollTo(this._private.position.px.x, this._private.boundaries.y.axisEnd, shouldAnimate, scrollSpeed);
+    this.scrollTo(this._private.position.x.px, this._private.boundaries.y.axisEnd, shouldAnimate, scrollSpeed);
   }
 
 
@@ -387,13 +393,13 @@ export default class Mustafas {
           }
         }
 
-        newCoordinates[xy] = this._private.position.px[xy] + pxToAdd;
+        newCoordinates[xy] = this._private.position[xy].px + pxToAdd;
       }
 
       // OVERSCROLLING IS NOT ALLOWED
 
       else {
-        newCoordinates[xy] = this._private.position.px[xy] + pxToAdd;
+        newCoordinates[xy] = this._private.position[xy].px + pxToAdd;
 
         // check on axis start (left or top)
         if (newCoordinates[xy] < boundaries[xy].axisStart) {
@@ -481,23 +487,23 @@ export default class Mustafas {
 
     let position = this._private.position;
 
-    if (position.px.x !== newCoordinates.x || position.px.y !== newCoordinates.y) {
+    if (position.x.px !== newCoordinates.x || position.y.px !== newCoordinates.y) {
       this._forXY((xy) => {
-        position.px[xy] = newCoordinates[xy];
+        position[xy].px = newCoordinates[xy];
         if (this._private.boundaries[xy].axisEnd > 0) {
-          position.percent[xy] = position.px[xy] / this._private.boundaries[xy].axisEnd;
+          position[xy].percent = position[xy].px / this._private.boundaries[xy].axisEnd;
         }
       });
       requestAnimationFrame(this._private.boundUpdateElementPositions);
 
       this.dispatchEvent(new Event(events.positionChanged), {
         position: {
-          x: position.px.x,
-          y: position.px.y
+          x: position.x.px,
+          y: position.y.px
         },
         percent: {
-          x: position.percent.x,
-          y: position.percent.y
+          x: position.x.percent,
+          y: position.y.percent
         }
       });
     }
@@ -509,7 +515,7 @@ export default class Mustafas {
 
   _updateElementPositions() {
     this._config.moveable.style.webkitTransform = `translate3d(
-        ${-this._private.position.px.x}px, ${-this._private.position.px.y}px, 0px)`;
+        ${-this._private.position.x.px}px, ${-this._private.position.y.px}px, 0px)`;
   }
 
 
@@ -526,11 +532,11 @@ export default class Mustafas {
   _checkForBounceStartOnAxis(axis) {
     if (this._private.isTouchActive || this._private.isBouncingOnAxis[axis] || this._private.isMomentumOnAxis[axis]) return;
 
-    if (this._private.position.px[axis] < this._private.boundaries[axis].axisStart) {
-      this.bounce.bounceToTargetOnAxis(axis, this._private.position.px[axis], this._private.boundaries[axis].axisStart);
+    if (this._private.position[axis].px < this._private.boundaries[axis].axisStart) {
+      this.bounce.bounceToTargetOnAxis(axis, this._private.position[axis].px, this._private.boundaries[axis].axisStart);
     }
-    else if (this._private.position.px[axis] > this._private.boundaries[axis].axisEnd) {
-      this.bounce.bounceToTargetOnAxis(axis, this._private.position.px[axis], this._private.boundaries[axis].axisEnd);
+    else if (this._private.position[axis].px > this._private.boundaries[axis].axisEnd) {
+      this.bounce.bounceToTargetOnAxis(axis, this._private.position[axis].px, this._private.boundaries[axis].axisEnd);
     }
   }
 
@@ -547,12 +553,12 @@ export default class Mustafas {
 
       this.dispatchEvent(new Event(events.positionStable), {
         position: {
-          x: position.px.x,
-          y: position.px.y
+          x: position.x.px,
+          y: position.y.px
         },
         percent: {
-          x: position.percent.x,
-          y: position.percent.y
+          x: position.x.percent,
+          y: position.y.percent
         }
       });
     }
