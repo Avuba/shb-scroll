@@ -60,11 +60,6 @@ let defaults = {
       height: 0,
       width: 0
     },
-    // an abstract moveable is used for calculations and bookkeeping
-    moveable: {
-      height: 0,
-      width: 0
-    },
     boundaries: {
       x: {
         axisStart: 0,
@@ -434,16 +429,16 @@ export default class Mustafas {
   _calculateParams() {
     let configMoveable =  this._config.moveable,
       configContainer = this._config.container,
-      moveable = this._private.moveable,
       container = this._private.container,
       boundaries = this._private.boundaries;
 
     container.width = configContainer.clientWidth;
     container.height = configContainer.clientHeight;
 
-    // client dimensions already take padding into account
-    moveable.width = configMoveable.clientWidth;
-    moveable.height = configMoveable.clientHeight;
+    let moveableDimensions = {
+      width: configMoveable.clientWidth,
+      height: configMoveable.clientHeight
+    };
 
     // calculate the maximum and minimum coordinates for scrolling. these are used as boundaries for
     // determining overscroll status, initiating bounce (if allowed); and also to determine bounce
@@ -452,7 +447,7 @@ export default class Mustafas {
       let dimension = xy === 'x' ? 'width' : 'height';
 
       boundaries[xy].axisStart = 0;
-      boundaries[xy].axisEnd = moveable[dimension] - container[dimension];
+      boundaries[xy].axisEnd = moveableDimensions[dimension] - container[dimension];
       // moveable is smaller than container on this axis, the only "stable" position is 0
       if (boundaries[xy].axisEnd < 0) boundaries[xy].axisEnd = 0;
     });
