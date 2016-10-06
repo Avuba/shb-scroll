@@ -254,8 +254,8 @@ export default class Mustafas {
     });
 
     if (this.resizeDebouncer) {
-      this._private.boundHandlerResize = this._handleResize.bind(this);
-      this.resizeDebouncer.addEventListener(this.resizeDebouncer.events.resize, this._private.boundHandlerResize);
+      this._private.boundHandleResize = this._handleResize.bind(this);
+      this.resizeDebouncer.addEventListener(this.resizeDebouncer.events.resize, this._private.boundHandleResize);
     }
   }
 
@@ -278,7 +278,7 @@ export default class Mustafas {
     });
 
     if (this.resizeDebouncer) {
-      this.resizeDebouncer.removeEventListener(this.resizeDebouncer.events.resize, this._private.boundHandlerResize);
+      this.resizeDebouncer.removeEventListener(this.resizeDebouncer.events.resize, this._private.boundHandleResize);
     }
   }
 
