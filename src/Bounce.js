@@ -37,7 +37,7 @@ export default class Bounce {
     if (config) fUtils.mergeDeep(this._config, config);
     this._private.axis = this._config.axis.split('');
 
-    this._bindBounce();
+    this._private.boundBounce = this._runBounce.bind(this);
 
     this.events = events;
     utils.addEventTargetInterface(this);
@@ -65,11 +65,6 @@ export default class Bounce {
 
 
   // LIFECYCLE
-
-
-  _bindBounce() {
-    this._private.boundBounce = this._runBounce.bind(this);
-  }
 
 
   _startBounceOnAxis(axis, startPositionPx, targetPositionPx, animateTime) {
