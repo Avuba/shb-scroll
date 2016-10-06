@@ -79,11 +79,11 @@ let defaults = {
     position: {
       x: {
         px: 0,
-        percent: 0
+        percentage: 0
       },
       y: {
         px: 0,
-        percent: 0
+        percentage: 0
       }
     },
     axis: ['x', 'y'],
@@ -136,19 +136,19 @@ export default class Mustafas {
   }
 
 
-  setPositionPercent(positionPercent) {
-    this.scrollToPercent(positionPercent, positionPercent);
+  setPositionPercentage(positionPercentage) {
+    this.scrollToPercentage(positionPercentage, positionPercentage);
   }
 
 
-  scrollToPercent(left, top, shouldAnimate, scrollSpeed) {
-    let percent = { x: left, y: top },
+  scrollToPercentage(left, top, shouldAnimate, scrollSpeed) {
+    let percentage = { x: left, y: top },
       range = { x: 0, y: 0 },
       position = { x: 0, y: 0 };
 
     this._forXY((xy) => {
       range[xy] = this._private.boundaries[xy].axisEnd - this._private.boundaries[xy].axisStart;
-      position[xy] = this._private.boundaries[xy].axisStart + (range[xy] * percent[xy]);
+      position[xy] = this._private.boundaries[xy].axisStart + (range[xy] * percentage[xy]);
     });
 
     this.scrollTo(position.x, position.y, shouldAnimate, scrollSpeed);
@@ -486,7 +486,7 @@ export default class Mustafas {
       this._forXY((xy) => {
         position[xy].px = newCoordinates[xy];
         if (this._private.boundaries[xy].axisEnd > 0) {
-          position[xy].percent = position[xy].px / this._private.boundaries[xy].axisEnd;
+          position[xy].percentage = position[xy].px / this._private.boundaries[xy].axisEnd;
         }
       });
       requestAnimationFrame(this._private.boundUpdateElementPositions);
@@ -496,9 +496,9 @@ export default class Mustafas {
           x: position.x.px,
           y: position.y.px
         },
-        percent: {
-          x: position.x.percent,
-          y: position.y.percent
+        percentage: {
+          x: position.x.percentage,
+          y: position.y.percentage
         }
       });
     }
@@ -551,9 +551,9 @@ export default class Mustafas {
           x: position.x.px,
           y: position.y.px
         },
-        percent: {
-          x: position.x.percent,
-          y: position.y.percent
+        percentage: {
+          x: position.x.percentage,
+          y: position.y.percentage
         }
       });
     }
