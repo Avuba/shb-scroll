@@ -116,10 +116,9 @@ export default class Mustafas {
 
     if (this._config.refreshOnResize) this.resizeDebouncer = new ResizeDebouncer();
 
-    this._private.boundUpdateElementPositions = this._updateElementPositions.bind(this);
-    this._private.boundCalculateParams = this._calculateParams.bind(this);
-
-    requestAnimationFrame(this._private.boundCalculateParams);
+    requestAnimationFrame(() => {
+      this._calculateParams();
+    });
 
     this.events = events;
     utils.addEventTargetInterface(this);
@@ -132,7 +131,9 @@ export default class Mustafas {
 
   refresh(config) {
     if (config) fUtils.mergeDeep(this._config, config);
-    requestAnimationFrame(this._private.boundCalculateParams);
+    requestAnimationFrame(() => {
+      this._calculateParams();
+    });
   }
 
 
@@ -489,7 +490,9 @@ export default class Mustafas {
           position[xy].percentage = position[xy].px / this._private.boundaries[xy].axisEnd;
         }
       });
-      requestAnimationFrame(this._private.boundUpdateElementPositions);
+      requestAnimationFrame(() => {
+        this._updateElementPositions();
+      });
 
       this.dispatchEvent(new Event(events.positionChanged), {
         position: {
