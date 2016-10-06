@@ -1,6 +1,6 @@
 {
   "name": "mustafas",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "a lightweight scrollable object",
   "scripts": {
     "build": "webpack --mode=build",
