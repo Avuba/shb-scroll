@@ -1,0 +1,9 @@
+# directories
+dev
+dist
+node_modules
+
+# files
+.eslintrc*
+
+# edge cases
