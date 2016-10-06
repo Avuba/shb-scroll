@@ -136,19 +136,19 @@ export default class Mustafas {
   }
 
 
-  setPositionPercentile(positionPercentile) {
-    this.scrollToPercentile(positionPercentile, positionPercentile);
+  setPositionPercent(positionPercent) {
+    this.scrollToPercent(positionPercent, positionPercent);
   }
 
 
-  scrollToPercentile(left, top, shouldAnimate, scrollSpeed) {
-    let percentile = { x: left, y: top },
+  scrollToPercent(left, top, shouldAnimate, scrollSpeed) {
+    let percent = { x: left, y: top },
       range = { x: 0, y: 0 },
       position = { x: 0, y: 0 };
 
     this._forXY((xy) => {
       range[xy] = this._private.boundaries[xy].axisEnd - this._private.boundaries[xy].axisStart;
-      position[xy] = this._private.boundaries[xy].axisStart + (range[xy] * percentile[xy]);
+      position[xy] = this._private.boundaries[xy].axisStart + (range[xy] * percent[xy]);
     });
 
     this.scrollTo(position.x, position.y, shouldAnimate, scrollSpeed);
