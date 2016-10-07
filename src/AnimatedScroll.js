@@ -1,6 +1,7 @@
 import { default as fUtils } from './fUtils/index.js';
 import { default as utils } from './utils.js';
 
+
 let defaults = {
   config: {
     axis: 'xy',
@@ -26,11 +27,13 @@ let defaults = {
   }
 };
 
+
 let events = {
   start: 'animatedScroll:start',
   scrollTo: 'animatedScroll:scrollTo',
   stop: 'animatedScroll:stop'
 };
+
 
 export default class AnimatedScroll {
   constructor(config) {
