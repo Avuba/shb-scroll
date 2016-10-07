@@ -6,6 +6,7 @@ import { default as Bounce } from './Bounce.js';
 import { default as AnimatedScroll } from './AnimatedScroll.js';
 import { default as ResizeDebouncer } from './ResizeDebouncer.js';
 
+
 let defaults = {
   config: {
     // main container for defining the boundaries of the scrollable area and
@@ -464,7 +465,6 @@ export default class Mustafas {
         let overscrollPx = this._private.overscrollPx,
           boundaries = this._private.boundaries;
 
-
         // check on axis start (left or top)
         if (newCoordinates[xy] < boundaries[xy].axisStart) {
           overscrollPx[xy] = boundaries[xy].axisStart - newCoordinates[xy];
@@ -546,7 +546,6 @@ export default class Mustafas {
         && !this._private.isBouncingOnAxis.y
         && !this._private.isMomentumOnAxis.x
         && !this._private.isMomentumOnAxis.y) {
-
       let position = this._private.position;
 
       this.dispatchEvent(new Event(events.positionStable), {
