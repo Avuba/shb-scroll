@@ -3,6 +3,7 @@ import { default as utils } from './utils.js';
 
 let defaults = {
   config: {
+    axis: 'xy',
     maxPxPerFrame: 50,
     minPxPerFrame: 0.2,
     slowingDistance: 150
@@ -20,7 +21,8 @@ let defaults = {
       radians: 0,
       x: 0,         // component weight in x, effectively cos(radians)
       y: 0          // component weight in y, effectively sin(radians)
-    }
+    },
+    axis: ['x', 'y']
   }
 };
 
@@ -55,25 +57,13 @@ export default class AnimatedScroll {
 
     // SET STARTING POSITION AND TARGET
 
-    this._private.startPosition = {
-      x: startPosition.x,
-      y: startPosition.y
-    };
+    this._forXY((xy) => {
+      this._private.startPosition[xy] = startPosition[xy];
+      this._private.currentPosition[xy] = startPosition[xy];
+      this._private.targetPosition[xy] = targetPosition[xy];
+    });
 
-    this._private.currentPosition = {
-      x: startPosition.x,
-      y: startPosition.y
-    };
-
-    this._private.targetPosition = {
-      x: targetPosition.x,
-      y: targetPosition.y
-    };
-
-    this._private.totalDistance = this._getPositionDistance(
-      this._private.startPosition,
-      this._private.targetPosition
-    );
+    this._private.totalDistance = this._getPositionDistance(this._private.startPosition, this._private.targetPosition);
 
     // CALCULATE SCROLL DIRECTION
 
@@ -123,39 +113,38 @@ export default class AnimatedScroll {
     }
 
     // we need to check if the current position passed the target, which can happen at high speeds
-    let passedTargetX = false,
-      passedTargetY = false;
+    let passedTargetOnAxis = {
+      x: false,
+      y: false
+    };
 
-    if (this._private.direction.x > 0) {
-      passedTargetX = this._private.currentPosition.x - this._private.targetPosition.x > 0.5;
-    }
-    else {
-      passedTargetX = this._private.currentPosition.x - this._private.targetPosition.x < 0.5;
-    }
-
-    if (this._private.direction.y > 0) {
-      passedTargetY = this._private.currentPosition.y - this._private.targetPosition.y > 0.5;
-    }
-    else {
-      passedTargetY = this._private.currentPosition.y - this._private.targetPosition.y < 0.5;
-    }
+    this._forXY((xy) => {
+      if (this._private.direction[xy] > 0) {
+        passedTargetOnAxis[xy] = this._private.currentPosition[xy] - this._private.targetPosition[xy] > 0.5;
+      }
+      else {
+        passedTargetOnAxis[xy] = this._private.currentPosition[xy] - this._private.targetPosition[xy] < 0.5;
+      }
+    });
 
     // stop when on target
-    if (distanceToTarget < 1 || this._private.pxPerFrame < this._config.minPxPerFrame || passedTargetX || passedTargetY) {
-      this._private.currentPosition.x += this._private.targetPosition.x;
-      this._private.currentPosition.y += this._private.targetPosition.y;
+    if (this._private.pxPerFrame < this._config.minPxPerFrame
+        || distanceToTarget < 1
+        || passedTargetOnAxis.x
+        || passedTargetOnAxis.y) {
 
+      this._forXY((xy) => {
+        this._private.currentPosition[xy] = this._private.targetPosition[xy];
+      });
       this.dispatchEvent(new Event(events.scrollTo), this._private.targetPosition);
-
       this.stopAnimatedScroll();
     }
     // otherwise move towards target
     else {
-      this._private.currentPosition.x += this._private.pxPerFrame * this._private.direction.x;
-      this._private.currentPosition.y += this._private.pxPerFrame * this._private.direction.y;
-
+      this._forXY((xy) => {
+        this._private.currentPosition[xy] += this._private.pxPerFrame * this._private.direction[xy];
+      });
       this.dispatchEvent(new Event(events.scrollTo), this._private.currentPosition);
-
       this._private.currentFrame = requestAnimationFrame(this._private.boundAnimatedScroll);
     }
   }
@@ -166,5 +155,10 @@ export default class AnimatedScroll {
 
   _getPositionDistance(pos1, pos2) {
     return Math.sqrt( ((pos2.x - pos1.x) * (pos2.x - pos1.x)) + ((pos2.y - pos1.y) * (pos2.y - pos1.y)) );
+  }
+
+
+  _forXY(toExecute) {
+    this._private.axis.forEach(toExecute);
   }
 }
