@@ -13,7 +13,7 @@ module.exports = {
     "no-unreachable": "warn",
 
     // best practices
-    "curly": ["warn", "multi", "consistent"],
+    "curly": ["warn", "multi-line"],
     "no-multi-spaces": "warn", //
     "vars-on-top": "warn",
 
