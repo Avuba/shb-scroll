@@ -428,7 +428,7 @@ export default class Mustafas {
 
 
   _calculateParams() {
-    let configMoveable =  this._config.moveable,
+    let configMoveable = this._config.moveable,
       configContainer = this._config.container,
       container = this._private.container,
       boundaries = this._private.boundaries;

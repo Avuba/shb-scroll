@@ -14,7 +14,7 @@ _export.getTranslatedNodePosition = function(domNode) {
   return {
     x: domNode.offsetLeft + nodeMatrix.m41,
     y: domNode.offsetTop + nodeMatrix.m42
-  }
+  };
 };
 
 

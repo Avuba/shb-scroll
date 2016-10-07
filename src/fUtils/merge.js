@@ -41,10 +41,10 @@ _export.mergeDeep = function(target, source, options) {
 
 _private.mergeDeep = function(target, source, options) {
   // set convertKeys true in case we're merging a dict into an array
-  var convertKeys = (target instanceof Array && !(source instanceof Array)),
+  let convertKeys = (target instanceof Array && !(source instanceof Array)),
     sourceKeys = convertKeys ? Object.keys(source) : null;
 
-  fUtils.forEach(source, function(value, key) {
+  fUtils.forEach(source, (value, key) => {
     // converting dict- to array-keys enables merging dicts into arrays
     if (convertKeys && isNaN(key)) {
       key = sourceKeys.indexOf(key);

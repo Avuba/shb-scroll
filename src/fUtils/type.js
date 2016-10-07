@@ -132,7 +132,7 @@ _export.isImmutable = function(toCheck) {
  */
 _export.isInt = function(toCheck) {
   if (isNaN(toCheck)) return false;
-  var x = parseFloat(toCheck);
+  let x = parseFloat(toCheck);
   return (x | 0) === x;
 };
 
