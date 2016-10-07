@@ -123,7 +123,7 @@ export default class AnimatedScroll {
         passedTargetOnAxis[xy] = this._private.currentPosition[xy] - this._private.targetPosition[xy] > 0.5;
       }
       else {
-        passedTargetOnAxis[xy] = this._private.currentPosition[xy] - this._private.targetPosition[xy] < 0.5;
+        passedTargetOnAxis[xy] = this._private.currentPosition[xy] - this._private.targetPosition[xy] < -0.5;
       }
     });
 
