@@ -67,7 +67,7 @@ _private.cloneDeep = function(source, recursionBuffer) {
     }
   }
 
-  var toReturn;
+  let toReturn;
 
   if (source instanceof Function) {
     toReturn = new Function('return ' + source.toString())();
@@ -76,21 +76,21 @@ _private.cloneDeep = function(source, recursionBuffer) {
     toReturn = (function() { return arguments; }());
   }
   else {
-    var Constructor = source.constructor;
+    let Constructor = source.constructor;
 
     switch (Constructor) {
-      case RegExp:
-        toReturn = new Constructor(source);
-        break;
-      case Date:
-        toReturn = new Constructor(source.getTime());
-        break;
-      default:
-        toReturn = new Constructor();
+    case RegExp:
+      toReturn = new Constructor(source);
+      break;
+    case Date:
+      toReturn = new Constructor(source.getTime());
+      break;
+    default:
+      toReturn = new Constructor();
     }
   }
 
-  fUtils.forEach(source, function(value, key) {
+  fUtils.forEach(source, (value, key) => {
     toReturn[key] = _private.cloneDeep(value, recursionBuffer);
   });
 

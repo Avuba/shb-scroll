@@ -8,7 +8,7 @@ import { default as misc } from './misc.js';
 
 let _export = {},
   simpleMerge = function(target, source) {
-    for (var key in source) {
+    for (let key in source) {
       if (source.hasOwnProperty(key)) {
         target[key] = source[key];
       }

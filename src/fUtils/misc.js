@@ -4,7 +4,7 @@ let _export = {},
 
 _export.lastPosition = (array) => {
   return array[array.length - 1];
-}
+};
 
 
 export default _export;
