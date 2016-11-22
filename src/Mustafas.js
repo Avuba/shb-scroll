@@ -1,8 +1,9 @@
 // TODO: import via npm as soon as available
 import { default as ShbTouch } from './vendor/ShbTouch';
 
-import { default as fUtils } from './fUtils/index.js';
-import { default as utils } from './utils.js';
+import { default as utils } from './utils/utils';
+import { default as lodash } from './utils/lodash';
+
 import { default as Momentum } from './Momentum.js';
 import { default as Bounce } from './Bounce.js';
 import { default as AnimatedScroll } from './AnimatedScroll.js';
@@ -98,17 +99,17 @@ let defaults = {
 
 
 let events = {
-  positionChanged: 'mustafas:positionChanged',
-  positionStable: 'mustafas:positionStable'
+  positionChanged: 'positionChanged',
+  positionStable: 'positionStable'
 };
 
 
 export default class Mustafas {
   constructor(config) {
-    this._config = fUtils.cloneDeep(defaults.config);
-    this._private = fUtils.cloneDeep(defaults.private);
+    this._config = lodash.cloneDeep(defaults.config);
+    this._private = lodash.cloneDeep(defaults.private);
 
-    if (config) fUtils.mergeDeep(this._config, config);
+    if (config) lodash.merge(this._config, config);
     this._private.axis = this._config.axis.split('');
 
     this.shbTouch = new ShbTouch(this._config);
@@ -130,7 +131,7 @@ export default class Mustafas {
 
 
   refresh(config) {
-    if (config) fUtils.mergeDeep(this._config, config);
+    if (config) lodash.merge(this._config, config);
 
     requestAnimationFrame(() => {
       this._calculateParams();
@@ -217,7 +218,7 @@ export default class Mustafas {
       touchEndWithMomentum: this._onTouchEndWithMomentum.bind(this)
     };
 
-    fUtils.forEach(this._private.boundShbTouchHandlers, (handler, eventName) => {
+    lodash.forEach(this._private.boundShbTouchHandlers, (handler, eventName) => {
       this.shbTouch.addEventListener(eventName, handler);
     });
 
@@ -227,7 +228,7 @@ export default class Mustafas {
       bounceToPosition: this._handleBounceToPosition.bind(this)
     };
 
-    fUtils.forEach(this._private.boundBounceHandlers, (handler, eventName) => {
+    lodash.forEach(this._private.boundBounceHandlers, (handler, eventName) => {
       this.bounce.addEventListener(eventName, handler);
     });
 
@@ -238,7 +239,7 @@ export default class Mustafas {
       stop: this._handleMomentumStop.bind(this)
     };
 
-    fUtils.forEach(this._private.boundMomentumHandlers, (handler, eventName) => {
+    lodash.forEach(this._private.boundMomentumHandlers, (handler, eventName) => {
       this.momentum.addEventListener(eventName, handler);
     });
 
@@ -248,7 +249,7 @@ export default class Mustafas {
       stop: this._handleAnimatedScrollStop.bind(this)
     };
 
-    fUtils.forEach(this._private.boundAnimatedScrollHandlers, (handler, eventName) => {
+    lodash.forEach(this._private.boundAnimatedScrollHandlers, (handler, eventName) => {
       this.animatedScroll.addEventListener(eventName, handler);
     });
 
@@ -260,19 +261,19 @@ export default class Mustafas {
 
 
   _unbindEvents() {
-    fUtils.forEach(this._private.boundShbTouchHandlers, (handler, eventName) => {
+    lodash.forEach(this._private.boundShbTouchHandlers, (handler, eventName) => {
       this.shbTouch.removeEventListener(eventName, handler);
     });
 
-    fUtils.forEach(this._private.boundBounceHandlers, (handler, eventName) => {
+    lodash.forEach(this._private.boundBounceHandlers, (handler, eventName) => {
       this.bounce.removeEventListener(eventName, handler);
     });
 
-    fUtils.forEach(this._private.boundMomentumHandlers, (handler, eventName) => {
+    lodash.forEach(this._private.boundMomentumHandlers, (handler, eventName) => {
       this.momentum.removeEventListener(eventName, handler);
     });
 
-    fUtils.forEach(this._private.boundAnimatedScrollHandlers, (handler, eventName) => {
+    lodash.forEach(this._private.boundAnimatedScrollHandlers, (handler, eventName) => {
       this.animatedScroll.removeEventListener(eventName, handler);
     });
 
