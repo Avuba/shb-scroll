@@ -62,15 +62,23 @@ let defaults = {
       width: 0
     },
     boundaries: {
+      x: { start: 0, end: 0 },
+      y: { start: 0, end: 0 }
+    },
+    moveable: {
       x: {
-        axisStart: 0,
-        axisEnd: 0
+        position: 0, // in pixels
+        progress: 0, // in percent
+        overscroll: 0 // in pixels
       },
       y: {
-        axisStart: 0,
-        axisEnd: 0
+        position: 0,
+        progress: 0,
+        overscroll: 0
       }
     },
+
+
     overscrollPx: {
       x: 0,
       y: 0
@@ -85,6 +93,8 @@ let defaults = {
         percentage: 0
       }
     }
+
+
   },
 
   state: {
@@ -149,8 +159,8 @@ export default class ShbScroll {
       position = { x: 0, y: 0 };
 
     this._forXY((xy) => {
-      range[xy] = this._private.boundaries[xy].axisEnd - this._private.boundaries[xy].axisStart;
-      position[xy] = this._private.boundaries[xy].axisStart + (range[xy] * percentage[xy]);
+      range[xy] = this._private.boundaries[xy].end - this._private.boundaries[xy].start;
+      position[xy] = this._private.boundaries[xy].start + (range[xy] * percentage[xy]);
     });
 
     this.scrollTo(position.x, position.y, shouldAnimate, scrollSpeed);
@@ -181,12 +191,12 @@ export default class ShbScroll {
 
 
   scrollTop(shouldAnimate, scrollSpeed) {
-    this.scrollTo(this._private.position.x.px, this._private.boundaries.y.axisStart, shouldAnimate, scrollSpeed);
+    this.scrollTo(this._private.position.x.px, this._private.boundaries.y.start, shouldAnimate, scrollSpeed);
   }
 
 
   scrollBottom(shouldAnimate, scrollSpeed) {
-    this.scrollTo(this._private.position.x.px, this._private.boundaries.y.axisEnd, shouldAnimate, scrollSpeed);
+    this.scrollTo(this._private.position.x.px, this._private.boundaries.y.end, shouldAnimate, scrollSpeed);
   }
 
 
@@ -375,11 +385,11 @@ export default class ShbScroll {
       // but also for momentum; we multiply the displacement by a linear factor of the overscroll
       // distance; the further the overscroll, the smaller the displacement
       if (this._config.overscroll) {
-        if (this._private.overscrollPx[xy] > 0) {
+        if (this._private.moveable[xy].overscroll > 0) {
           // for non-touch pushes (i.e. momentum) we use a smaller overscroll maximum, so that the
           // momentum is reduced (and stopped) earlier. this gets us closer to the iOS behavior
           let maxOverscroll = this._state.isTouchActive ? this._config.maxTouchOverscroll : this._config.maxMomentumOverscroll,
-            multiplier = utils.easeLinear(this._private.overscrollPx[xy], 1, -1, maxOverscroll);
+            multiplier = utils.easeLinear(this._private.moveable[xy].overscroll, 1, -1, maxOverscroll);
 
           pxToAdd *= multiplier;
 
@@ -400,13 +410,13 @@ export default class ShbScroll {
         newCoordinates[xy] = this._private.position[xy].px + pxToAdd;
 
         // check on axis start (left or top)
-        if (newCoordinates[xy] < boundaries[xy].axisStart) {
-          newCoordinates[xy] = boundaries[xy].axisStart;
+        if (newCoordinates[xy] < boundaries[xy].start) {
+          newCoordinates[xy] = boundaries[xy].start;
           stopMomentum = true;
         }
         // check on axis end (right or bottom)
-        else if (newCoordinates[xy] > boundaries[xy].axisEnd) {
-          newCoordinates[xy] = boundaries[xy].axisEnd;
+        else if (newCoordinates[xy] > boundaries[xy].end) {
+          newCoordinates[xy] = boundaries[xy].end;
           stopMomentum = true;
         }
       }
@@ -420,8 +430,7 @@ export default class ShbScroll {
 
   _onTouchEndWithMomentum(event) {
     // do not start new momentum when overscrolling
-    if (this._private.overscrollPx.x > 0 || this._private.overscrollPx.y > 0) return;
-
+    if (this._private.moveable.x.overscroll > 0 || this._private.moveable.y.overscroll > 0) return;
     this.momentum.startMomentum(event.data);
   }
 
@@ -449,10 +458,10 @@ export default class ShbScroll {
     this._forXY((xy) => {
       let dimension = xy === 'x' ? 'width' : 'height';
 
-      boundaries[xy].axisStart = 0;
-      boundaries[xy].axisEnd = moveableDimensions[dimension] - container[dimension];
+      boundaries[xy].start = 0;
+      boundaries[xy].end = moveableDimensions[dimension] - container[dimension];
       // moveable is smaller than container on this axis, the only "stable" position is 0
-      if (boundaries[xy].axisEnd < 0) boundaries[xy].axisEnd = 0;
+      if (boundaries[xy].end < 0) boundaries[xy].end = 0;
     });
   }
 
@@ -463,19 +472,18 @@ export default class ShbScroll {
       // DEAL WITH OVERSCROLLING
 
       if (this._config.overscroll) {
-        let overscrollPx = this._private.overscrollPx,
-          boundaries = this._private.boundaries;
+        let boundaries = this._private.boundaries;
 
         // check on axis start (left or top)
-        if (newCoordinates[xy] < boundaries[xy].axisStart) {
-          overscrollPx[xy] = boundaries[xy].axisStart - newCoordinates[xy];
+        if (newCoordinates[xy] < boundaries[xy].start) {
+          this._private.moveable[xy].overscroll = boundaries[xy].start - newCoordinates[xy];
         }
         // check on axis end (right or bottom)
-        else if (newCoordinates[xy] > boundaries[xy].axisEnd) {
-          overscrollPx[xy] = newCoordinates[xy] - boundaries[xy].axisEnd;
+        else if (newCoordinates[xy] > boundaries[xy].end) {
+          this._private.moveable[xy].overscroll = newCoordinates[xy] - boundaries[xy].end;
         }
         else {
-          overscrollPx[xy] = 0;
+          this._private.moveable[xy].overscroll = 0;
         }
       }
     });
@@ -487,8 +495,8 @@ export default class ShbScroll {
     if (position.x.px !== newCoordinates.x || position.y.px !== newCoordinates.y) {
       this._forXY((xy) => {
         position[xy].px = newCoordinates[xy];
-        if (this._private.boundaries[xy].axisEnd > 0) {
-          position[xy].percentage = position[xy].px / this._private.boundaries[xy].axisEnd;
+        if (this._private.boundaries[xy].end > 0) {
+          position[xy].percentage = position[xy].px / this._private.boundaries[xy].end;
         }
       });
 
@@ -532,13 +540,13 @@ export default class ShbScroll {
   _checkForBounceStartOnAxis(axis) {
     if (this._state.isTouchActive || this._state.isBouncingOnAxis[axis] || this._state.isMomentumOnAxis[axis]) return;
 
-    if (this._private.position[axis].px < this._private.boundaries[axis].axisStart) {
+    if (this._private.position[axis].px < this._private.boundaries[axis].start) {
       if (this._private.axis.length > 1) this.momentum.stopMomentum();
-      this.bounce.bounceToTargetOnAxis(axis, this._private.position[axis].px, this._private.boundaries[axis].axisStart);
+      this.bounce.bounceToTargetOnAxis(axis, this._private.position[axis].px, this._private.boundaries[axis].start);
     }
-    else if (this._private.position[axis].px > this._private.boundaries[axis].axisEnd) {
+    else if (this._private.position[axis].px > this._private.boundaries[axis].end) {
       if (this._private.axis.length > 1) this.momentum.stopMomentum();
-      this.bounce.bounceToTargetOnAxis(axis, this._private.position[axis].px, this._private.boundaries[axis].axisEnd);
+      this.bounce.bounceToTargetOnAxis(axis, this._private.position[axis].px, this._private.boundaries[axis].end);
     }
   }
 
@@ -584,11 +592,11 @@ export default class ShbScroll {
       boundaries = this._private.boundaries;
 
     this._forXY((xy) => {
-      if (position[xy] < boundaries[xy].axisStart) {
-        result[xy] = boundaries[xy].axisStart;
+      if (position[xy] < boundaries[xy].start) {
+        result[xy] = boundaries[xy].start;
       }
-      else if (position[xy] > boundaries[xy].axisEnd) {
-        result[xy] = boundaries[xy].axisEnd;
+      else if (position[xy] > boundaries[xy].end) {
+        result[xy] = boundaries[xy].end;
       }
       else {
         result[xy] = position[xy];
