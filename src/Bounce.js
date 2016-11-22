@@ -10,12 +10,15 @@ let defaults = {
 
   private: {
     axis: ['x', 'y'],
-    isActive: { x: false, y: false },
     startPosition: { x: 0, y: 0 },
     currentPosition: { x: 0, y: 0 },
     targetPosition: { x: 0, y: 0 },
     animateTime: { x: 0, y: 0 },
     startTime: { x: 0, y: 0 }
+  },
+
+  state: {
+    isActive: { x: false, y: false }
   }
 };
 
@@ -33,6 +36,7 @@ export default class Bounce {
   constructor(config) {
     this._config = lodash.cloneDeep(defaults.config);
     this._private = lodash.cloneDeep(defaults.private);
+    this._state = lodash.cloneDeep(defaults.state);
 
     if (config) lodash.merge(this._config, config);
     this._private.axis = this._config.axis.split('');
@@ -70,9 +74,9 @@ export default class Bounce {
   _startBounceOnAxis(axis, startPositionPx, targetPositionPx, animateTime) {
     cancelAnimationFrame(this._private.currentFrame);
 
-    let isBounceStart = !this._private.isActive.x && !this._private.isActive.y;
+    let isBounceStart = !this._state.isActive.x && !this._state.isActive.y;
 
-    this._private.isActive[axis] = true;
+    this._state.isActive[axis] = true;
     this._private.startPosition[axis] = startPositionPx;
     this._private.currentPosition[axis] = startPositionPx;
     this._private.targetPosition[axis] = targetPositionPx;
@@ -88,7 +92,7 @@ export default class Bounce {
 
   _runBounce() {
     this._forXY((xy) => {
-      if (this._private.isActive[xy]) {
+      if (this._state.isActive[xy]) {
         let timePassed = Date.now() - this._private.startTime[xy];
 
         // CALCULATE NEW POSITION
@@ -107,7 +111,7 @@ export default class Bounce {
         // bounce stops on this axis: snap to target, un-flag bounce, dispatch event
         else {
           this._private.currentPosition[xy] = this._private.targetPosition[xy];
-          this._private.isActive[xy] = false;
+          this._state.isActive[xy] = false;
 
           this.dispatchEvent(new Event(events.bounceEndOnAxis), { axis: xy });
         }
@@ -116,7 +120,7 @@ export default class Bounce {
 
     this.dispatchEvent(new Event(events.bounceToPosition), this._private.currentPosition);
 
-    if (this._private.isActive.x || this._private.isActive.y) {
+    if (this._state.isActive.x || this._state.isActive.y) {
       this._private.currentFrame = requestAnimationFrame(this._private.boundBounce);
     }
     else {
@@ -127,8 +131,8 @@ export default class Bounce {
 
   _stopBounce() {
     this._forXY((xy) => {
-      if (this._private.isActive[xy]) {
-        this._private.isActive[xy] = false;
+      if (this._state.isActive[xy]) {
+        this._state.isActive[xy] = false;
         this.dispatchEvent(new Event(events.bounceEndOnAxis), { axis: xy });
       }
     });

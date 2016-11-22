@@ -11,7 +11,7 @@ let defaults = {
   },
 
   private: {
-    isActive: false,
+    axis: ['x', 'y'],
     startPosition: { x: 0, y: 0 },
     currentPosition: { x: 0, y: 0 },
     targetPosition: { x: 0, y: 0 },
@@ -22,8 +22,11 @@ let defaults = {
       radians: 0,
       x: 0,         // component weight in x, effectively cos(radians)
       y: 0          // component weight in y, effectively sin(radians)
-    },
-    axis: ['x', 'y']
+    }
+  },
+
+  state: {
+    isActive: false
   }
 };
 
@@ -39,6 +42,7 @@ export default class AnimatedScroll {
   constructor(config) {
     this._config = lodash.cloneDeep(defaults.config);
     this._private = lodash.cloneDeep(defaults.private);
+    this._state = lodash.cloneDeep(defaults.state);
 
     if (config) lodash.merge(this._config, config);
     this._private.axis = this._config.axis.split('');
@@ -54,9 +58,9 @@ export default class AnimatedScroll {
 
 
   startAnimatedScroll(startPosition, targetPosition, scrollSpeed) {
-    if (this._private.isActive) cancelAnimationFrame(this._private.currentFrame);
+    if (this._state.isActive) cancelAnimationFrame(this._private.currentFrame);
 
-    this._private.isActive = true;
+    this._state.isActive = true;
 
     // SET STARTING POSITION AND TARGET
 
@@ -85,7 +89,7 @@ export default class AnimatedScroll {
     // set the current scrolling speed to the maximum speed; speed will decrease as the moveable
     // nears its target position
     this._private.pxPerFrame = this._private.maxPxPerFrame;
-    this._private.isActive = true;
+    this._state.isActive = true;
 
     this._private.currentFrame = requestAnimationFrame(this._private.boundAnimatedScroll);
 
@@ -94,10 +98,10 @@ export default class AnimatedScroll {
 
 
   stopAnimatedScroll() {
-    if (!this._private.isActive) return;
+    if (!this._state.isActive) return;
 
     this._private.pxPerFrame = 0;
-    this._private.isActive = false;
+    this._state.isActive = false;
 
     cancelAnimationFrame(this._private.currentFrame);
     this.dispatchEvent(new Event(events.stop));

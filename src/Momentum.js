@@ -20,9 +20,12 @@ let defaults = {
 
   private: {
     axis: ['x', 'y'],
-    isActive: { x: false, y: false },
     currentMomentum: null,
     currentFrame: null
+  },
+
+  state: {
+    isActive: { x: false, y: false }
   }
 };
 
@@ -40,6 +43,7 @@ export default class Momentum {
   constructor(config) {
     this._config = lodash.cloneDeep(defaults.config);
     this._private = lodash.cloneDeep(defaults.private);
+    this._state = lodash.cloneDeep(defaults.state);
 
     if (config) lodash.merge(this._config, config);
     this._private.axis = this._config.axis.split('');
@@ -56,15 +60,15 @@ export default class Momentum {
 
   startMomentum(momentum) {
     let wasActive = {
-      x: this._private.isActive.x,
-      y: this._private.isActive.y
+      x: this._state.isActive.x,
+      y: this._state.isActive.y
     };
 
     // limit pixel per frame
     this._forXY((xy) => {
       if (momentum[xy].pxPerFrame > 0) {
         if (momentum[xy].pxPerFrame > this._config.maxPxPerFrame) momentum[xy].pxPerFrame = this._config.maxPxPerFrame;
-        this._private.isActive[xy] = true;
+        this._state.isActive[xy] = true;
       }
     });
 
@@ -89,14 +93,14 @@ export default class Momentum {
 
 
   stopMomentumOnAxis(axis) {
-    if (this._private.isActive[axis]) {
+    if (this._state.isActive[axis]) {
       this._private.currentMomentum[axis].direction = 0;
       this._private.currentMomentum[axis].pxPerFrame = 0;
-      this._private.isActive[axis] = false;
+      this._state.isActive[axis] = false;
 
       this.dispatchEvent(new Event(events.stopOnAxis), { axis: axis });
 
-      if (!this._private.isActive.x && !this._private.isActive.y) {
+      if (!this._state.isActive.x && !this._state.isActive.y) {
         cancelAnimationFrame(this._private.currentFrame);
         this.dispatchEvent(new Event(events.stop));
       }
@@ -128,7 +132,7 @@ export default class Momentum {
       }
     });
 
-    if (!this._private.isActive.x && !this._private.isActive.y) {
+    if (!this._state.isActive.x && !this._state.isActive.y) {
       this.stopMomentum();
     }
     else {

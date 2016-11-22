@@ -56,7 +56,7 @@ let defaults = {
   },
 
   private: {
-    // an abstract container is used for calculations and bookkeeping
+    axis: ['x', 'y'],
     container: {
       height: 0,
       width: 0
@@ -71,12 +71,10 @@ let defaults = {
         axisEnd: 0
       }
     },
-    // amount of overscroll on each axis, is pixels
     overscrollPx: {
       x: 0,
       y: 0
     },
-    // the current position, relative to the upper-left corner of the moveable
     position: {
       x: {
         px: 0,
@@ -86,12 +84,14 @@ let defaults = {
         px: 0,
         percentage: 0
       }
-    },
-    axis: ['x', 'y'],
-    isBouncingOnAxis: { x: false, y: false },
-    isMomentumOnAxis: { x: false, y: false },
+    }
+  },
+
+  state: {
+    isTouchActive: false,
     isAnimatedScrolling: false,
-    isTouchActive: false
+    isBouncingOnAxis: { x: false, y: false },
+    isMomentumOnAxis: { x: false, y: false }
   }
 };
 
@@ -106,6 +106,7 @@ export default class ShbScroll {
   constructor(config) {
     this._config = lodash.cloneDeep(defaults.config);
     this._private = lodash.cloneDeep(defaults.private);
+    this._state = lodash.cloneDeep(defaults.state);
 
     if (config) lodash.merge(this._config, config);
     this._private.axis = this._config.axis.split('');
@@ -285,7 +286,7 @@ export default class ShbScroll {
 
 
   _handleTouchStart() {
-    this._private.isTouchActive = true;
+    this._state.isTouchActive = true;
 
     this.bounce.stop();
     this.momentum.stopMomentum();
@@ -293,19 +294,19 @@ export default class ShbScroll {
 
 
   _handleTouchEnd() {
-    this._private.isTouchActive = false;
+    this._state.isTouchActive = false;
     this._checkForBounceStart();
     this._checkForPositionStable();
   }
 
 
   _handleBounceStartOnAxis(event) {
-    this._private.isBouncingOnAxis[event.data.axis] = true;
+    this._state.isBouncingOnAxis[event.data.axis] = true;
   }
 
 
   _handleBounceEndOnAxis(event) {
-    this._private.isBouncingOnAxis[event.data.axis] = false;
+    this._state.isBouncingOnAxis[event.data.axis] = false;
     this._checkForPositionStable();
   }
 
@@ -316,15 +317,15 @@ export default class ShbScroll {
     // removing the axis-separation logic in bounce and instead always using a target, similarly
     // to what happens in animated scroll
     let newPosition = {
-      x: this._private.isBouncingOnAxis.x ? event.data.x : this._private.position.x.px,
-      y: this._private.isBouncingOnAxis.y ? event.data.y : this._private.position.y.px
+      x: this._state.isBouncingOnAxis.x ? event.data.x : this._private.position.x.px,
+      y: this._state.isBouncingOnAxis.y ? event.data.y : this._private.position.y.px
     };
     this._updateCoords(newPosition);
   }
 
 
   _handleMomentumStartOnAxis(event) {
-    this._private.isMomentumOnAxis[event.data.axis] = true;
+    this._state.isMomentumOnAxis[event.data.axis] = true;
   }
 
 
@@ -334,18 +335,18 @@ export default class ShbScroll {
 
 
   _handleMomentumStopOnAxis(event) {
-    this._private.isMomentumOnAxis[event.data.axis] = false;
+    this._state.isMomentumOnAxis[event.data.axis] = false;
     this._checkForBounceStartOnAxis(event.data.axis);
   }
 
 
   _handleAnimatedScrollStart() {
-    this._private.isAnimatedScrolling = true;
+    this._state.isAnimatedScrolling = true;
   }
 
 
   _handleAnimatedScrollStop() {
-    this._private.isAnimatedScrolling = false;
+    this._state.isAnimatedScrolling = false;
     this._checkForPositionStable();
   }
 
@@ -377,14 +378,14 @@ export default class ShbScroll {
         if (this._private.overscrollPx[xy] > 0) {
           // for non-touch pushes (i.e. momentum) we use a smaller overscroll maximum, so that the
           // momentum is reduced (and stopped) earlier. this gets us closer to the iOS behavior
-          let maxOverscroll = this._private.isTouchActive ? this._config.maxTouchOverscroll : this._config.maxMomentumOverscroll,
+          let maxOverscroll = this._state.isTouchActive ? this._config.maxTouchOverscroll : this._config.maxMomentumOverscroll,
             multiplier = utils.easeLinear(this._private.overscrollPx[xy], 1, -1, maxOverscroll);
 
           pxToAdd *= multiplier;
 
           // if the source of push was momentum, and the multiplier or result are too low, we
           // stop the momentum so that bounce can kick in
-          if (this._private.isMomentumOnAxis[xy]
+          if (this._state.isMomentumOnAxis[xy]
             && (multiplier < this._config.minMomentumMultiplier || Math.abs(pxToAdd) < this._config.minMomentumPush)) {
             stopMomentum = true;
           }
@@ -528,7 +529,7 @@ export default class ShbScroll {
 
 
   _checkForBounceStartOnAxis(axis) {
-    if (this._private.isTouchActive || this._private.isBouncingOnAxis[axis] || this._private.isMomentumOnAxis[axis]) return;
+    if (this._state.isTouchActive || this._state.isBouncingOnAxis[axis] || this._state.isMomentumOnAxis[axis]) return;
 
     if (this._private.position[axis].px < this._private.boundaries[axis].axisStart) {
       if (this._private.axis.length > 1) this.momentum.stopMomentum();
@@ -542,12 +543,12 @@ export default class ShbScroll {
 
 
   _checkForPositionStable() {
-    if (!this._private.isTouchActive
-        && !this._private.isAnimatedScrolling
-        && !this._private.isBouncingOnAxis.x
-        && !this._private.isBouncingOnAxis.y
-        && !this._private.isMomentumOnAxis.x
-        && !this._private.isMomentumOnAxis.y) {
+    if (!this._state.isTouchActive
+        && !this._state.isAnimatedScrolling
+        && !this._state.isBouncingOnAxis.x
+        && !this._state.isBouncingOnAxis.y
+        && !this._state.isMomentumOnAxis.x
+        && !this._state.isMomentumOnAxis.y) {
       let position = this._private.position;
 
       this.dispatchEvent(new Event(events.positionStable), {
