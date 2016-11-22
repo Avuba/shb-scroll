@@ -319,7 +319,15 @@ export default class Mustafas {
 
 
   _handleBounceToPosition(event) {
-    this._updateCoords(event.data);
+    // bounce will send us a coordinate pair, but only the coordinate for the active axis is
+    // meaningful, which causes problems in 2d-scrollable objects; this would better be avoided by
+    // removing the axis-separation logic in bounce and instead always using a target, similarly
+    // to what happens in animated scroll
+    let newPosition = {
+      x: this._private.isBouncingOnAxis.x ? event.data.x : this._private.position.x.px,
+      y: this._private.isBouncingOnAxis.y ? event.data.y : this._private.position.y.px
+    };
+    this._updateCoords(newPosition);
   }
 
 
@@ -531,9 +539,11 @@ export default class Mustafas {
     if (this._private.isTouchActive || this._private.isBouncingOnAxis[axis] || this._private.isMomentumOnAxis[axis]) return;
 
     if (this._private.position[axis].px < this._private.boundaries[axis].axisStart) {
+      if (this._private.axis.length > 1) this.momentum.stopMomentum();
       this.bounce.bounceToTargetOnAxis(axis, this._private.position[axis].px, this._private.boundaries[axis].axisStart);
     }
     else if (this._private.position[axis].px > this._private.boundaries[axis].axisEnd) {
+      if (this._private.axis.length > 1) this.momentum.stopMomentum();
       this.bounce.bounceToTargetOnAxis(axis, this._private.position[axis].px, this._private.boundaries[axis].axisEnd);
     }
   }
