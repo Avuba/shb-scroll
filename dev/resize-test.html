@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width">
+
+  <title>Standalone scroller - Resize test</title>
+  <style>
+
+    .container-title {
+      position: absolute;
+      font-family: sans-serif;
+      font-size: small;
+    }
+
+    .container {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: #eee;
+      overflow: hidden;
+    }
+
+    .moveable {
+      position: absolute;
+      width: 300px;
+      height: 2000px;
+      background: url('pattern.jpg');
+      transform: translate3d(0px, 0px, 0px);
+      will-change: transform;
+    }
+
+    </style>
+</head>
+
+<body>
+  <script src="Mustafas.js" charset="utf-8"></script>
+
+  <div class="container" id="container-1">
+    <div class="moveable" id="moveable-1"></div>
+  </div>
+
+  <script type="text/javascript">
+    var container1 = document.getElementById('container-1');
+    var moveable1 = document.getElementById('moveable-1');
+    let config = {
+      container: container1,
+      moveable: moveable1,
+      refreshOnResize: true
+      // we could certainly also include the following
+      // axis: 'x',
+      // overscroll: true,
+      // maxOverscroll: 300,
+      // maxOverscrollTime: 500
+    }
+    var scroll = new Mustafas(config);
+
+  </script>
+
+</body>
+
+</html>
