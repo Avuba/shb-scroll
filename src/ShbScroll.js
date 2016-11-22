@@ -61,17 +61,9 @@ let defaults = {
       height: 0,
       width: 0
     },
-    boundaries: {
-      x: {
-        start: 0,
-        end: 0
-      },
-      y: {
-        start: 0,
-        end: 0
-      }
-    },
     moveable: {
+      width: 0,
+      height: 0,
       x: {
         position: 0, // in pixels
         progress: 0, // in percent
@@ -81,6 +73,16 @@ let defaults = {
         position: 0,
         progress: 0,
         overscroll: 0
+      }
+    },
+    boundaries: {
+      x: {
+        start: 0,
+        end: 0
+      },
+      y: {
+        start: 0,
+        end: 0
       }
     }
   },
@@ -163,13 +165,13 @@ export default class ShbScroll {
     this.momentum.stopMomentum();
     this.bounce.stop();
 
-    let validTargetPosition = this._getNearestValidPosition({ x: left, y: top });
+    let targetPosition = this._getClosestScrollTarget({ x: left, y: top });
 
     if (shouldAnimate) {
-      this.animatedScroll.startAnimatedScroll({ x: this._private.moveable.x.position, y: this._private.moveable.y.position }, validTargetPosition, scrollSpeed);
+      this.animatedScroll.startAnimatedScroll({ x: this._private.moveable.x.position, y: this._private.moveable.y.position }, targetPosition, scrollSpeed);
     }
     else {
-      this._updateCoords(validTargetPosition);
+      this._updateCoords(targetPosition);
     }
   }
 
@@ -281,12 +283,31 @@ export default class ShbScroll {
   }
 
 
+  _calculateParams() {
+    this._private.container.width = this._config.container.clientWidth;
+    this._private.container.height = this._config.container.clientHeight;
+
+    this._private.moveable.width = this._config.moveable.clientWidth;
+    this._private.moveable.height = this._config.moveable.clientHeight;
+
+    this._forXY((xy) => {
+      let dimension = xy === 'x' ? 'width' : 'height';
+
+      this._private.boundaries[xy].start = 0;
+      this._private.boundaries[xy].end = this._private.moveable[dimension] - this._private.container[dimension];
+
+      // in case the moveable is smaller than the container on the specific axis, the only "stable"
+      // end position is 0
+      if (this._private.boundaries[xy].end < 0) this._private.boundaries[xy].end = 0;
+    });
+  }
+
+
   // EVENT HANDLERS
 
 
   _onTouchStart() {
     this._state.isTouchActive = true;
-
     this.bounce.stop();
     this.momentum.stopMomentum();
   }
@@ -418,41 +439,45 @@ export default class ShbScroll {
 
 
   _onTouchEndWithMomentum(event) {
-    // do not start new momentum when overscrolling
     if (this._private.moveable.x.overscroll > 0 || this._private.moveable.y.overscroll > 0) return;
     this.momentum.startMomentum(event.data);
   }
 
 
-  // POSITION AND MOVEMENT
+  // CONDITION CHECKERS
 
 
-  _calculateParams() {
-    let configMoveable = this._config.moveable,
-      configContainer = this._config.container,
-      container = this._private.container,
-      boundaries = this._private.boundaries;
-
-    container.width = configContainer.clientWidth;
-    container.height = configContainer.clientHeight;
-
-    let moveableDimensions = {
-      width: configMoveable.clientWidth,
-      height: configMoveable.clientHeight
-    };
-
-    // calculate the maximum and minimum coordinates for scrolling. these are used as boundaries for
-    // determining overscroll status, initiating bounce (if allowed); and also to determine bounce
-    // target position when overscrolling
+  _checkForBounceStart() {
     this._forXY((xy) => {
-      let dimension = xy === 'x' ? 'width' : 'height';
-
-      boundaries[xy].start = 0;
-      boundaries[xy].end = moveableDimensions[dimension] - container[dimension];
-      // moveable is smaller than container on this axis, the only "stable" position is 0
-      if (boundaries[xy].end < 0) boundaries[xy].end = 0;
+      this._checkForBounceStartOnAxis(xy);
     });
   }
+
+
+  _checkForBounceStartOnAxis(axis) {
+    if (this._state.isTouchActive || this._state.isBouncingOnAxis[axis] || this._state.isMomentumOnAxis[axis]) return;
+
+    if (this._private.moveable[axis].position < this._private.boundaries[axis].start) {
+      if (this._private.axis.length > 1) this.momentum.stopMomentum();
+      this.bounce.bounceToTargetOnAxis(axis, this._private.moveable[axis].position, this._private.boundaries[axis].start);
+    }
+    else if (this._private.moveable[axis].position > this._private.boundaries[axis].end) {
+      if (this._private.axis.length > 1) this.momentum.stopMomentum();
+      this.bounce.bounceToTargetOnAxis(axis, this._private.moveable[axis].position, this._private.boundaries[axis].end);
+    }
+  }
+
+
+  _checkForPositionStable() {
+    if (!this._state.isTouchActive && !this._state.isAnimatedScrolling
+        && !this._state.isBouncingOnAxis.x && !this._state.isBouncingOnAxis.y
+        && !this._state.isMomentumOnAxis.x && !this._state.isMomentumOnAxis.y) {
+      this.dispatchEvent(new Event(events.positionStable), lodash.cloneDeep(this._private.moveable));
+    }
+  }
+
+
+  // MOVEMENT AND POSITIONING
 
 
   _updateCoords(newCoordinates) {
@@ -496,44 +521,8 @@ export default class ShbScroll {
   }
 
 
-  // DOM MANIPULATION
-
-
   _updateMoveablePosition() {
     this._config.moveable.style.webkitTransform = `translate3d(${-this._private.moveable.x.position}px, ${-this._private.moveable.y.position}px, 0px)`;
-  }
-
-
-  // CONDITION CHECKING
-
-
-  _checkForBounceStart() {
-    this._forXY((xy) => {
-      this._checkForBounceStartOnAxis(xy);
-    });
-  }
-
-
-  _checkForBounceStartOnAxis(axis) {
-    if (this._state.isTouchActive || this._state.isBouncingOnAxis[axis] || this._state.isMomentumOnAxis[axis]) return;
-
-    if (this._private.moveable[axis].position < this._private.boundaries[axis].start) {
-      if (this._private.axis.length > 1) this.momentum.stopMomentum();
-      this.bounce.bounceToTargetOnAxis(axis, this._private.moveable[axis].position, this._private.boundaries[axis].start);
-    }
-    else if (this._private.moveable[axis].position > this._private.boundaries[axis].end) {
-      if (this._private.axis.length > 1) this.momentum.stopMomentum();
-      this.bounce.bounceToTargetOnAxis(axis, this._private.moveable[axis].position, this._private.boundaries[axis].end);
-    }
-  }
-
-
-  _checkForPositionStable() {
-    if (!this._state.isTouchActive && !this._state.isAnimatedScrolling
-        && !this._state.isBouncingOnAxis.x && !this._state.isBouncingOnAxis.y
-        && !this._state.isMomentumOnAxis.x && !this._state.isMomentumOnAxis.y) {
-      this.dispatchEvent(new Event(events.positionStable), lodash.cloneDeep(this._private.moveable));
-    }
   }
 
 
@@ -550,7 +539,7 @@ export default class ShbScroll {
   }
 
 
-  _getNearestValidPosition(position) {
+  _getClosestScrollTarget(position) {
     let result = { x: 0, y: 0 },
       boundaries = this._private.boundaries;
 
