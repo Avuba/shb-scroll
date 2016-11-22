@@ -6,7 +6,6 @@ import { default as utils } from './utils.js';
 import { default as Momentum } from './Momentum.js';
 import { default as Bounce } from './Bounce.js';
 import { default as AnimatedScroll } from './AnimatedScroll.js';
-import { default as ResizeDebouncer } from './ResizeDebouncer.js';
 
 
 let defaults = {
@@ -117,8 +116,6 @@ export default class Mustafas {
     this.momentum = new Momentum(this._config);
     this.animatedScroll = new AnimatedScroll(this._config);
 
-    if (this._config.refreshOnResize) this.resizeDebouncer = new ResizeDebouncer();
-
     requestAnimationFrame(() => {
       this._calculateParams();
     });
@@ -134,6 +131,7 @@ export default class Mustafas {
 
   refresh(config) {
     if (config) fUtils.mergeDeep(this._config, config);
+
     requestAnimationFrame(() => {
       this._calculateParams();
     });
@@ -203,8 +201,6 @@ export default class Mustafas {
     this._unbindEvents();
     this.shbTouch.destroy();
 
-    if (this.resizeDebouncer) this.resizeDebouncer.destroy();
-
     this._config.container = null;
     this._config.moveable = null;
   }
@@ -256,9 +252,9 @@ export default class Mustafas {
       this.animatedScroll.addEventListener(eventName, handler);
     });
 
-    if (this.resizeDebouncer) {
-      this._private.boundHandleResize = this._handleResize.bind(this);
-      this.resizeDebouncer.addEventListener(this.resizeDebouncer.events.resize, this._private.boundHandleResize);
+    if (this._config.refreshOnResize) {
+      this._private.boundDebouncedRefresh = utils.getDebounced(this.refresh.bind(this));
+      window.addEventListener('resize', this._private.boundDebouncedRefresh);
     }
   }
 
@@ -280,18 +276,13 @@ export default class Mustafas {
       this.animatedScroll.removeEventListener(eventName, handler);
     });
 
-    if (this.resizeDebouncer) {
-      this.resizeDebouncer.removeEventListener(this.resizeDebouncer.events.resize, this._private.boundHandleResize);
+    if (this._private.boundDebouncedRefresh) {
+      window.removeEventListener('resize', this._private.boundDebouncedRefresh);
     }
   }
 
 
   // EVENT HANDLERS
-
-
-  _handleResize() {
-    this.refresh();
-  }
 
 
   _handleTouchStart() {
