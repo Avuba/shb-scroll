@@ -35,13 +35,13 @@ if (shellArgs.minify === 'true' || shellArgs.minify === true) {
 
 
 module.exports = {
-  entry: './src/Mustafas.js',
+  entry: './src/ShbScroll.js',
   output: {
     path: outputPath,
-    filename: 'Mustafas.js',
+    filename: 'ShbScroll.js',
     // helps exposing library to the window object while still matching AMD /
     // commonJS / etc. requirements: https://github.com/umdjs/umd
-    library: 'Mustafas',
+    library: 'ShbScroll',
     libraryTarget: 'umd',
     umdNamedDefine: true
   },

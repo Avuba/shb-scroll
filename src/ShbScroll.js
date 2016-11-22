@@ -1,9 +1,7 @@
-// TODO: import via npm as soon as available
-import { default as ShbTouch } from './vendor/ShbTouch';
-
 import { default as utils } from './utils/utils';
 import { default as lodash } from './utils/lodash';
-
+// TODO: import via npm as soon as available
+import { default as ShbTouch } from './vendor/ShbTouch';
 import { default as Momentum } from './Momentum.js';
 import { default as Bounce } from './Bounce.js';
 import { default as AnimatedScroll } from './AnimatedScroll.js';
@@ -104,7 +102,7 @@ let events = {
 };
 
 
-export default class Mustafas {
+export default class ShbScroll {
   constructor(config) {
     this._config = lodash.cloneDeep(defaults.config);
     this._private = lodash.cloneDeep(defaults.private);
@@ -117,13 +115,13 @@ export default class Mustafas {
     this.momentum = new Momentum(this._config);
     this.animatedScroll = new AnimatedScroll(this._config);
 
-    requestAnimationFrame(() => {
-      this._calculateParams();
-    });
-
     this.events = events;
     utils.addEventTargetInterface(this);
     this._bindEvents();
+
+    requestAnimationFrame(() => {
+      this._calculateParams();
+    });
   }
 
 

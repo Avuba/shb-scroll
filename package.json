@@ -1,7 +1,7 @@
 {
-  "name": "mustafas",
-  "version": "0.0.5",
-  "description": "a lightweight scrollable object",
+  "name": "shb-scroll",
+  "version": "0.0.1",
+  "description": "a scrollable UI element for one or two axis scrolling",
   "scripts": {
     "lint-test": "eslint ./src/** --cache",
     "lint-fix": "eslint ./src/** --fix --cache",
@@ -29,7 +29,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/avuba/mustafas.git"
+    "url": "git+https://github.com/avuba/shb-scroll.git"
   },
   "author": "Avuba",
   "contributors": [
@@ -44,7 +44,7 @@
   ],
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/avuba/mustafas/issues"
+    "url": "https://github.com/avuba/shb-scroll/issues"
   },
-  "homepage": "https://github.com/avuba/mustafas#readme"
+  "homepage": "https://github.com/avuba/shb-scroll#readme"
 }
