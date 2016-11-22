@@ -1,4 +1,6 @@
-import { default as Kotti } from '../node_modules/kotti/dist/Kotti.js';
+// TODO: import via npm as soon as available
+import { default as ShbTouch } from './vendor/ShbTouch';
+
 import { default as fUtils } from './fUtils/index.js';
 import { default as utils } from './utils.js';
 import { default as Momentum } from './Momentum.js';
@@ -110,7 +112,7 @@ export default class Mustafas {
     if (config) fUtils.mergeDeep(this._config, config);
     this._private.axis = this._config.axis.split('');
 
-    this.kotti = new Kotti(this._config);
+    this.shbTouch = new ShbTouch(this._config);
     this.bounce = new Bounce(this._config);
     this.momentum = new Momentum(this._config);
     this.animatedScroll = new AnimatedScroll(this._config);
@@ -190,16 +192,16 @@ export default class Mustafas {
   }
 
 
-  freezeScroll(shouldFreeze) {
+  disableScrolling(isDisabled) {
     this.momentum.stopMomentum();
     this.animatedScroll.stop();
-    this.kotti.setEnabled(!shouldFreeze);
+    this.shbTouch.disableScrolling(isDisabled);
   }
 
 
   destroy() {
     this._unbindEvents();
-    this.kotti.destroy();
+    this.shbTouch.destroy();
 
     if (this.resizeDebouncer) this.resizeDebouncer.destroy();
 
@@ -212,46 +214,46 @@ export default class Mustafas {
 
 
   _bindEvents() {
-    this._private.boundHandlersKotti = {
+    this._private.boundShbTouchHandlers = {
       touchStart: this._handleTouchStart.bind(this),
       touchEnd: this._handleTouchEnd.bind(this),
       pushBy: this._handlePushBy.bind(this),
-      finishedTouchWithMomentum: this._handleTouchMomentum.bind(this)
+      touchEndWithMomentum: this._onTouchEndWithMomentum.bind(this)
     };
 
-    fUtils.forEach(this._private.boundHandlersKotti, (handler, eventType) => {
-      this.kotti.addEventListener(this.kotti.events[eventType], handler);
+    fUtils.forEach(this._private.boundShbTouchHandlers, (handler, eventName) => {
+      this.shbTouch.addEventListener(eventName, handler);
     });
 
-    this._private.boundHandlersBounce = {
+    this._private.boundBounceHandlers = {
       bounceStartOnAxis: this._handleBounceStartOnAxis.bind(this),
       bounceEndOnAxis: this._handleBounceEndOnAxis.bind(this),
       bounceToPosition: this._handleBounceToPosition.bind(this)
     };
 
-    fUtils.forEach(this._private.boundHandlersBounce, (handler, eventType) => {
-      this.bounce.addEventListener(this.bounce.events[eventType], handler);
+    fUtils.forEach(this._private.boundBounceHandlers, (handler, eventName) => {
+      this.bounce.addEventListener(eventName, handler);
     });
 
-    this._private.boundHandlersMomentum = {
+    this._private.boundMomentumHandlers = {
       pushBy: this._handlePushBy.bind(this),
       startOnAxis: this._handleMomentumStartOnAxis.bind(this),
       stopOnAxis: this._handleMomentumStopOnAxis.bind(this),
       stop: this._handleMomentumStop.bind(this)
     };
 
-    fUtils.forEach(this._private.boundHandlersMomentum, (handler, eventType) => {
-      this.momentum.addEventListener(this.momentum.events[eventType], handler);
+    fUtils.forEach(this._private.boundMomentumHandlers, (handler, eventName) => {
+      this.momentum.addEventListener(eventName, handler);
     });
 
-    this._private.boundHandlersAnimatedScroll = {
+    this._private.boundAnimatedScrollHandlers = {
       start: this._handleAnimatedScrollStart.bind(this),
       scrollTo: this._handleAnimatedScrollTo.bind(this),
       stop: this._handleAnimatedScrollStop.bind(this)
     };
 
-    fUtils.forEach(this._private.boundHandlersAnimatedScroll, (handler, eventType) => {
-      this.animatedScroll.addEventListener(this.animatedScroll.events[eventType], handler);
+    fUtils.forEach(this._private.boundAnimatedScrollHandlers, (handler, eventName) => {
+      this.animatedScroll.addEventListener(eventName, handler);
     });
 
     if (this.resizeDebouncer) {
@@ -262,20 +264,20 @@ export default class Mustafas {
 
 
   _unbindEvents() {
-    fUtils.forEach(this._private.boundHandlersKotti, (handler, eventType) => {
-      this.kotti.removeEventListener(this.kotti.events[eventType], handler);
+    fUtils.forEach(this._private.boundShbTouchHandlers, (handler, eventName) => {
+      this.shbTouch.removeEventListener(eventName, handler);
     });
 
-    fUtils.forEach(this._private.boundHandlersBounce, (handler, eventType) => {
-      this.bounce.removeEventListener(this.bounce.events[eventType], handler);
+    fUtils.forEach(this._private.boundBounceHandlers, (handler, eventName) => {
+      this.bounce.removeEventListener(eventName, handler);
     });
 
-    fUtils.forEach(this._private.boundHandlersMomentum, (handler, eventType) => {
-      this.momentum.removeEventListener(this.momentum.events[eventType], handler);
+    fUtils.forEach(this._private.boundMomentumHandlers, (handler, eventName) => {
+      this.momentum.removeEventListener(eventName, handler);
     });
 
-    fUtils.forEach(this._private.boundHandlersAnimatedScroll, (handler, eventType) => {
-      this.animatedScroll.removeEventListener(this.animatedScroll.events[eventType], handler);
+    fUtils.forEach(this._private.boundAnimatedScrollHandlers, (handler, eventName) => {
+      this.animatedScroll.removeEventListener(eventName, handler);
     });
 
     if (this.resizeDebouncer) {
@@ -372,7 +374,7 @@ export default class Mustafas {
       boundaries = this._private.boundaries;
 
     this._forXY((xy) => {
-      // direction obtained from kotti is opposite to how we keep coordinates
+      // direction obtained from ShbTouch is opposite to how we keep coordinates
       let pxToAdd = pushBy[xy].px * (-pushBy[xy].direction),
         stopMomentum = false;
 
@@ -425,7 +427,7 @@ export default class Mustafas {
   }
 
 
-  _handleTouchMomentum(event) {
+  _onTouchEndWithMomentum(event) {
     // do not start new momentum when overscrolling
     if (this._private.overscrollPx.x > 0 || this._private.overscrollPx.y > 0) return;
 

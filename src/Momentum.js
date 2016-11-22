@@ -28,11 +28,11 @@ let defaults = {
 
 
 let events = {
-  pushBy: 'momentum:pushBy',
-  start: 'momentum:start',
-  startOnAxis: 'momentum:startOnAxis',
-  stopOnAxis: 'momentum:stopOnAxis',
-  stop: 'momentum:stop'
+  pushBy: 'pushBy',
+  start: 'start',
+  startOnAxis: 'startOnAxis',
+  stopOnAxis: 'stopOnAxis',
+  stop: 'stop'
 };
 
 

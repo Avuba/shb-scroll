@@ -29,9 +29,9 @@ let defaults = {
 
 
 let events = {
-  start: 'animatedScroll:start',
-  scrollTo: 'animatedScroll:scrollTo',
-  stop: 'animatedScroll:stop'
+  start: 'start',
+  scrollTo: 'scrollTo',
+  stop: 'stop'
 };
 
 
