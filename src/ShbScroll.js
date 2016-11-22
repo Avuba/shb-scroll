@@ -211,9 +211,9 @@ export default class ShbScroll {
 
   _bindEvents() {
     this._private.boundShbTouchHandlers = {
-      touchStart: this._handleTouchStart.bind(this),
-      touchEnd: this._handleTouchEnd.bind(this),
-      pushBy: this._handlePushBy.bind(this),
+      touchStart: this._onTouchStart.bind(this),
+      touchEnd: this._onTouchEnd.bind(this),
+      pushBy: this._onPushBy.bind(this),
       touchEndWithMomentum: this._onTouchEndWithMomentum.bind(this)
     };
 
@@ -222,9 +222,9 @@ export default class ShbScroll {
     });
 
     this._private.boundBounceHandlers = {
-      bounceStartOnAxis: this._handleBounceStartOnAxis.bind(this),
-      bounceEndOnAxis: this._handleBounceEndOnAxis.bind(this),
-      bounceToPosition: this._handleBounceToPosition.bind(this)
+      bounceStartOnAxis: this._onBounceStartOnAxis.bind(this),
+      bounceEndOnAxis: this._onBounceEndOnAxis.bind(this),
+      bounceToPosition: this._onBounceToPosition.bind(this)
     };
 
     lodash.forEach(this._private.boundBounceHandlers, (handler, eventName) => {
@@ -232,10 +232,10 @@ export default class ShbScroll {
     });
 
     this._private.boundMomentumHandlers = {
-      pushBy: this._handlePushBy.bind(this),
-      startOnAxis: this._handleMomentumStartOnAxis.bind(this),
-      stopOnAxis: this._handleMomentumStopOnAxis.bind(this),
-      stop: this._handleMomentumStop.bind(this)
+      startOnAxis: this._onMomentumStartOnAxis.bind(this),
+      stopOnAxis: this._onMomentumStopOnAxis.bind(this),
+      pushBy: this._onPushBy.bind(this),
+      stop: this._onMomentumStop.bind(this)
     };
 
     lodash.forEach(this._private.boundMomentumHandlers, (handler, eventName) => {
@@ -243,9 +243,9 @@ export default class ShbScroll {
     });
 
     this._private.boundAnimatedScrollHandlers = {
-      start: this._handleAnimatedScrollStart.bind(this),
-      scrollTo: this._handleAnimatedScrollTo.bind(this),
-      stop: this._handleAnimatedScrollStop.bind(this)
+      start: this._onAnimatedScrollStart.bind(this),
+      scrollTo: this._onAnimatedScrollTo.bind(this),
+      stop: this._onAnimatedScrollStop.bind(this)
     };
 
     lodash.forEach(this._private.boundAnimatedScrollHandlers, (handler, eventName) => {
@@ -285,7 +285,7 @@ export default class ShbScroll {
   // EVENT HANDLERS
 
 
-  _handleTouchStart() {
+  _onTouchStart() {
     this._state.isTouchActive = true;
 
     this.bounce.stop();
@@ -293,25 +293,25 @@ export default class ShbScroll {
   }
 
 
-  _handleTouchEnd() {
+  _onTouchEnd() {
     this._state.isTouchActive = false;
     this._checkForBounceStart();
     this._checkForPositionStable();
   }
 
 
-  _handleBounceStartOnAxis(event) {
+  _onBounceStartOnAxis(event) {
     this._state.isBouncingOnAxis[event.data.axis] = true;
   }
 
 
-  _handleBounceEndOnAxis(event) {
+  _onBounceEndOnAxis(event) {
     this._state.isBouncingOnAxis[event.data.axis] = false;
     this._checkForPositionStable();
   }
 
 
-  _handleBounceToPosition(event) {
+  _onBounceToPosition(event) {
     // bounce will send us a coordinate pair, but only the coordinate for the active axis is
     // meaningful, which causes problems in 2d-scrollable objects; this would better be avoided by
     // removing the axis-separation logic in bounce and instead always using a target, similarly
@@ -324,39 +324,39 @@ export default class ShbScroll {
   }
 
 
-  _handleMomentumStartOnAxis(event) {
+  _onMomentumStartOnAxis(event) {
     this._state.isMomentumOnAxis[event.data.axis] = true;
   }
 
 
-  _handleMomentumStop() {
+  _onMomentumStop() {
     this._checkForPositionStable();
   }
 
 
-  _handleMomentumStopOnAxis(event) {
+  _onMomentumStopOnAxis(event) {
     this._state.isMomentumOnAxis[event.data.axis] = false;
     this._checkForBounceStartOnAxis(event.data.axis);
   }
 
 
-  _handleAnimatedScrollStart() {
+  _onAnimatedScrollStart() {
     this._state.isAnimatedScrolling = true;
   }
 
 
-  _handleAnimatedScrollStop() {
+  _onAnimatedScrollStop() {
     this._state.isAnimatedScrolling = false;
     this._checkForPositionStable();
   }
 
 
-  _handleAnimatedScrollTo(event) {
+  _onAnimatedScrollTo(event) {
     this._updateCoords(event.data);
   }
 
 
-  _handlePushBy(event) {
+  _onPushBy(event) {
     let pushBy = event.data,
       newCoordinates = {
         x: this._private.position.x.px,
@@ -491,6 +491,7 @@ export default class ShbScroll {
           position[xy].percentage = position[xy].px / this._private.boundaries[xy].axisEnd;
         }
       });
+
       requestAnimationFrame(() => {
         this._updateElementPositions();
       });
