@@ -62,8 +62,14 @@ let defaults = {
       width: 0
     },
     boundaries: {
-      x: { start: 0, end: 0 },
-      y: { start: 0, end: 0 }
+      x: {
+        start: 0,
+        end: 0
+      },
+      y: {
+        start: 0,
+        end: 0
+      }
     },
     moveable: {
       x: {
@@ -76,32 +82,20 @@ let defaults = {
         progress: 0,
         overscroll: 0
       }
-    },
-
-
-    overscrollPx: {
-      x: 0,
-      y: 0
-    },
-    position: {
-      x: {
-        px: 0,
-        percentage: 0
-      },
-      y: {
-        px: 0,
-        percentage: 0
-      }
     }
-
-
   },
 
   state: {
     isTouchActive: false,
     isAnimatedScrolling: false,
-    isBouncingOnAxis: { x: false, y: false },
-    isMomentumOnAxis: { x: false, y: false }
+    isBouncingOnAxis: {
+      x: false,
+      y: false
+    },
+    isMomentumOnAxis: {
+      x: false,
+      y: false
+    }
   }
 };
 
@@ -130,9 +124,7 @@ export default class ShbScroll {
     utils.addEventTargetInterface(this);
     this._bindEvents();
 
-    requestAnimationFrame(() => {
-      this._calculateParams();
-    });
+    requestAnimationFrame(() => this._calculateParams());
   }
 
 
@@ -141,10 +133,7 @@ export default class ShbScroll {
 
   refresh(config) {
     if (config) lodash.merge(this._config, config);
-
-    requestAnimationFrame(() => {
-      this._calculateParams();
-    });
+    requestAnimationFrame(() => this._calculateParams());
   }
 
 
@@ -177,7 +166,7 @@ export default class ShbScroll {
     let validTargetPosition = this._getNearestValidPosition({ x: left, y: top });
 
     if (shouldAnimate) {
-      this.animatedScroll.startAnimatedScroll({ x: this._private.position.x.px, y: this._private.position.y.px }, validTargetPosition, scrollSpeed);
+      this.animatedScroll.startAnimatedScroll({ x: this._private.moveable.x.position, y: this._private.moveable.y.position }, validTargetPosition, scrollSpeed);
     }
     else {
       this._updateCoords(validTargetPosition);
@@ -186,17 +175,17 @@ export default class ShbScroll {
 
 
   scrollBy(left, top, shouldAnimate, scrollSpeed) {
-    this.scrollTo(this._private.position.x.px +left, this._private.position.y.px +top, shouldAnimate, scrollSpeed);
+    this.scrollTo(this._private.moveable.x.position +left, this._private.moveable.y.position + top, shouldAnimate, scrollSpeed);
   }
 
 
   scrollTop(shouldAnimate, scrollSpeed) {
-    this.scrollTo(this._private.position.x.px, this._private.boundaries.y.start, shouldAnimate, scrollSpeed);
+    this.scrollTo(this._private.moveable.x.position, this._private.boundaries.y.start, shouldAnimate, scrollSpeed);
   }
 
 
   scrollBottom(shouldAnimate, scrollSpeed) {
-    this.scrollTo(this._private.position.x.px, this._private.boundaries.y.end, shouldAnimate, scrollSpeed);
+    this.scrollTo(this._private.moveable.x.position, this._private.boundaries.y.end, shouldAnimate, scrollSpeed);
   }
 
 
@@ -327,8 +316,8 @@ export default class ShbScroll {
     // removing the axis-separation logic in bounce and instead always using a target, similarly
     // to what happens in animated scroll
     let newPosition = {
-      x: this._state.isBouncingOnAxis.x ? event.data.x : this._private.position.x.px,
-      y: this._state.isBouncingOnAxis.y ? event.data.y : this._private.position.y.px
+      x: this._state.isBouncingOnAxis.x ? event.data.x : this._private.moveable.x.position,
+      y: this._state.isBouncingOnAxis.y ? event.data.y : this._private.moveable.y.position
     };
     this._updateCoords(newPosition);
   }
@@ -369,8 +358,8 @@ export default class ShbScroll {
   _onPushBy(event) {
     let pushBy = event.data,
       newCoordinates = {
-        x: this._private.position.x.px,
-        y: this._private.position.x.px
+        x: this._private.moveable.x.position,
+        y: this._private.moveable.x.position
       },
       boundaries = this._private.boundaries;
 
@@ -401,13 +390,13 @@ export default class ShbScroll {
           }
         }
 
-        newCoordinates[xy] = this._private.position[xy].px + pxToAdd;
+        newCoordinates[xy] = this._private.moveable[xy].position + pxToAdd;
       }
 
       // OVERSCROLLING IS NOT ALLOWED
 
       else {
-        newCoordinates[xy] = this._private.position[xy].px + pxToAdd;
+        newCoordinates[xy] = this._private.moveable[xy].position + pxToAdd;
 
         // check on axis start (left or top)
         if (newCoordinates[xy] < boundaries[xy].start) {
@@ -490,30 +479,19 @@ export default class ShbScroll {
 
     // APPLY NEW COORDINATES AND DISPATCH EVENT
 
-    let position = this._private.position;
+    let moveable = this._private.moveable;
 
-    if (position.x.px !== newCoordinates.x || position.y.px !== newCoordinates.y) {
+    if (moveable.x.position !== newCoordinates.x || moveable.y.position !== newCoordinates.y) {
       this._forXY((xy) => {
-        position[xy].px = newCoordinates[xy];
+        moveable[xy].position = newCoordinates[xy];
+
         if (this._private.boundaries[xy].end > 0) {
-          position[xy].percentage = position[xy].px / this._private.boundaries[xy].end;
+          moveable[xy].progress = moveable[xy].position / this._private.boundaries[xy].end;
         }
       });
 
-      requestAnimationFrame(() => {
-        this._updateElementPositions();
-      });
-
-      this.dispatchEvent(new Event(events.positionChanged), {
-        position: {
-          x: position.x.px,
-          y: position.y.px
-        },
-        percentage: {
-          x: position.x.percentage,
-          y: position.y.percentage
-        }
-      });
+      requestAnimationFrame(() => this._updateMoveablePosition());
+      this.dispatchEvent(new Event(events.positionChanged), lodash.cloneDeep(this._private.moveable));
     }
   }
 
@@ -521,9 +499,8 @@ export default class ShbScroll {
   // DOM MANIPULATION
 
 
-  _updateElementPositions() {
-    this._config.moveable.style.webkitTransform = `translate3d(
-        ${-this._private.position.x.px}px, ${-this._private.position.y.px}px, 0px)`;
+  _updateMoveablePosition() {
+    this._config.moveable.style.webkitTransform = `translate3d(${-this._private.moveable.x.position}px, ${-this._private.moveable.y.position}px, 0px)`;
   }
 
 
@@ -540,36 +517,22 @@ export default class ShbScroll {
   _checkForBounceStartOnAxis(axis) {
     if (this._state.isTouchActive || this._state.isBouncingOnAxis[axis] || this._state.isMomentumOnAxis[axis]) return;
 
-    if (this._private.position[axis].px < this._private.boundaries[axis].start) {
+    if (this._private.moveable[axis].position < this._private.boundaries[axis].start) {
       if (this._private.axis.length > 1) this.momentum.stopMomentum();
-      this.bounce.bounceToTargetOnAxis(axis, this._private.position[axis].px, this._private.boundaries[axis].start);
+      this.bounce.bounceToTargetOnAxis(axis, this._private.moveable[axis].position, this._private.boundaries[axis].start);
     }
-    else if (this._private.position[axis].px > this._private.boundaries[axis].end) {
+    else if (this._private.moveable[axis].position > this._private.boundaries[axis].end) {
       if (this._private.axis.length > 1) this.momentum.stopMomentum();
-      this.bounce.bounceToTargetOnAxis(axis, this._private.position[axis].px, this._private.boundaries[axis].end);
+      this.bounce.bounceToTargetOnAxis(axis, this._private.moveable[axis].position, this._private.boundaries[axis].end);
     }
   }
 
 
   _checkForPositionStable() {
-    if (!this._state.isTouchActive
-        && !this._state.isAnimatedScrolling
-        && !this._state.isBouncingOnAxis.x
-        && !this._state.isBouncingOnAxis.y
-        && !this._state.isMomentumOnAxis.x
-        && !this._state.isMomentumOnAxis.y) {
-      let position = this._private.position;
-
-      this.dispatchEvent(new Event(events.positionStable), {
-        position: {
-          x: position.x.px,
-          y: position.y.px
-        },
-        percentage: {
-          x: position.x.percentage,
-          y: position.y.percentage
-        }
-      });
+    if (!this._state.isTouchActive && !this._state.isAnimatedScrolling
+        && !this._state.isBouncingOnAxis.x && !this._state.isBouncingOnAxis.y
+        && !this._state.isMomentumOnAxis.x && !this._state.isMomentumOnAxis.y) {
+      this.dispatchEvent(new Event(events.positionStable), lodash.cloneDeep(this._private.moveable));
     }
   }
 
