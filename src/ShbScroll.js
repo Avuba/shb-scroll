@@ -53,6 +53,9 @@ let defaults = {
 
     // when set to true, listens to debounced window.resize events and calls refresh
     refreshOnResize: true
+
+    // NOTE: please take a look at the config objects inside ShbTouch.js, Bounce.js, Momentum.js and
+    // AnimatedScroll.js regarding what other possible config parameters can be passed
   },
 
   private: {
@@ -213,7 +216,7 @@ export default class ShbScroll {
   _bindEvents() {
     this._private.boundShbTouchHandlers = {
       touchStart: this._onTouchStart.bind(this),
-      pushBy: this._onPush.bind(this),
+      touchPush: this._onPush.bind(this),
       touchEnd: this._onTouchEnd.bind(this),
       touchEndWithMomentum: this._onTouchEndWithMomentum.bind(this)
     };
@@ -296,8 +299,7 @@ export default class ShbScroll {
       this._private.boundaries[xy].start = 0;
       this._private.boundaries[xy].end = this._private.moveable[dimension] - this._private.container[dimension];
 
-      // in case the moveable is smaller than the container on the specific axis, the only "stable"
-      // end position is 0
+      // in case the moveable is smaller than the container, the only "stable" end position is 0
       if (this._private.boundaries[xy].end < 0) this._private.boundaries[xy].end = 0;
     });
   }
@@ -310,69 +312,6 @@ export default class ShbScroll {
     this._state.isTouchActive = true;
     this.bounce.stop();
     this.momentum.stop();
-  }
-
-
-  _onTouchEnd() {
-    this._state.isTouchActive = false;
-    this._checkForBounceStart();
-    this._checkForPositionStable();
-  }
-
-
-  _onBounceStartOnAxis(event) {
-    this._state.isBouncingOnAxis[event.data.axis] = true;
-  }
-
-
-  _onBounceEndOnAxis(event) {
-    this._state.isBouncingOnAxis[event.data.axis] = false;
-    this._checkForPositionStable();
-  }
-
-
-  _onBouncePush(event) {
-    // bounce will send us a coordinate pair, but only the coordinate for the active axis is
-    // meaningful, which causes problems in 2d-scrollable objects; this would better be avoided by
-    // removing the axis-separation logic in bounce and instead always using a target, similarly
-    // to what happens in animated scroll
-    let newPosition = {
-      x: this._state.isBouncingOnAxis.x ? event.data.x : this._private.moveable.x.position,
-      y: this._state.isBouncingOnAxis.y ? event.data.y : this._private.moveable.y.position
-    };
-    this._updateCoords(newPosition);
-  }
-
-
-  _onMomentumStartOnAxis(event) {
-    this._state.isMomentumOnAxis[event.data.axis] = true;
-  }
-
-
-  _onMomentumStop() {
-    this._checkForPositionStable();
-  }
-
-
-  _onMomentumStopOnAxis(event) {
-    this._state.isMomentumOnAxis[event.data.axis] = false;
-    this._checkForBounceStartOnAxis(event.data.axis);
-  }
-
-
-  _onAnimatedScrollStart() {
-    this._state.isAnimatedScrolling = true;
-  }
-
-
-  _onAnimatedScrollStop() {
-    this._state.isAnimatedScrolling = false;
-    this._checkForPositionStable();
-  }
-
-
-  _onAnimatedScrollPush(event) {
-    this._updateCoords(event.data);
   }
 
 
@@ -438,9 +377,72 @@ export default class ShbScroll {
   }
 
 
+  _onTouchEnd() {
+    this._state.isTouchActive = false;
+    this._checkForBounceStart();
+    this._checkForPositionStable();
+  }
+
+
   _onTouchEndWithMomentum(event) {
     if (this._private.moveable.x.overscroll > 0 || this._private.moveable.y.overscroll > 0) return;
     this.momentum.start(event.data);
+  }
+
+
+  _onMomentumStartOnAxis(event) {
+    this._state.isMomentumOnAxis[event.data.axis] = true;
+  }
+
+
+  _onMomentumStop() {
+    this._checkForPositionStable();
+  }
+
+
+  _onMomentumStopOnAxis(event) {
+    this._state.isMomentumOnAxis[event.data.axis] = false;
+    this._checkForBounceStartOnAxis(event.data.axis);
+  }
+
+
+  _onBounceStartOnAxis(event) {
+    this._state.isBouncingOnAxis[event.data.axis] = true;
+  }
+
+
+  _onBouncePush(event) {
+    // bounce will send us a coordinate pair, but only the coordinate for the active axis is
+    // meaningful, which causes problems in 2d-scrollable objects; this would better be avoided by
+    // removing the axis-separation logic in bounce and instead always using a target, similarly
+    // to what happens in animated scroll
+    let newPosition = {
+      x: this._state.isBouncingOnAxis.x ? event.data.x : this._private.moveable.x.position,
+      y: this._state.isBouncingOnAxis.y ? event.data.y : this._private.moveable.y.position
+    };
+    this._updateCoords(newPosition);
+  }
+
+
+  _onBounceEndOnAxis(event) {
+    this._state.isBouncingOnAxis[event.data.axis] = false;
+    this._checkForPositionStable();
+  }
+
+
+  _onAnimatedScrollStart() {
+    this._state.isAnimatedScrolling = true;
+  }
+
+
+  _onAnimatedScrollPush(event) {
+    this._updateCoords(event.data);
+  }
+
+
+  _onAnimatedScrollStop() {
+    this._state.isAnimatedScrolling = false;
+    this._checkForPositionStable();
   }
 
 

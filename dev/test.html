@@ -1,13 +1,12 @@
 <!DOCTYPE html>
 <html>
-
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width">
 
   <title>Standalone scroller</title>
-  <style>
 
+  <style>
     .container {
       position: absolute;
       width: 80%;
@@ -35,7 +34,6 @@
       height: 100%;
       background: url('pattern.jpg');
     }
-
     </style>
 </head>
 
@@ -50,26 +48,15 @@
   <script src="ShbScroll.js" charset="utf-8"></script>
 
   <script type="text/javascript">
-    var container1 = document.getElementById('container-1');
-    var moveable1 = document.getElementById('moveable-1');
+    var container1 = document.getElementById('container-1'),
+      moveable1 = document.getElementById('moveable-1');
+
     var scroll = new ShbScroll({
       container: container1,
       moveable: moveable1,
-      axis: 'xy'
-      // we could certainly also include the following
-      // axis: 'x',
-      // overscroll: true,
-      // maxOverscroll: 300,
-      // maxOverscrollTime: 500
+      axis: 'xy',
+      preventDefault: true
     });
-
-
-    // scroll.addEventListener(scroll.events.positionChanged, function(event) {
-    //   console.log(event.data.percent);
-    // });
-
   </script>
-
 </body>
-
 </html>
