@@ -213,8 +213,8 @@ export default class ShbScroll {
   _bindEvents() {
     this._private.boundShbTouchHandlers = {
       touchStart: this._onTouchStart.bind(this),
+      pushBy: this._onPush.bind(this),
       touchEnd: this._onTouchEnd.bind(this),
-      pushBy: this._onPushBy.bind(this),
       touchEndWithMomentum: this._onTouchEndWithMomentum.bind(this)
     };
 
@@ -224,8 +224,8 @@ export default class ShbScroll {
 
     this._private.boundBounceHandlers = {
       bounceStartOnAxis: this._onBounceStartOnAxis.bind(this),
+      bouncePush: this._onBouncePush.bind(this),
       bounceEndOnAxis: this._onBounceEndOnAxis.bind(this),
-      bounceToPosition: this._onBounceToPosition.bind(this)
     };
 
     lodash.forEach(this._private.boundBounceHandlers, (handler, eventName) => {
@@ -233,10 +233,10 @@ export default class ShbScroll {
     });
 
     this._private.boundMomentumHandlers = {
-      startOnAxis: this._onMomentumStartOnAxis.bind(this),
-      stopOnAxis: this._onMomentumStopOnAxis.bind(this),
-      pushBy: this._onPushBy.bind(this),
-      stop: this._onMomentumStop.bind(this)
+      momentumStartOnAxis: this._onMomentumStartOnAxis.bind(this),
+      momentumPush: this._onPush.bind(this),
+      momentumStop: this._onMomentumStop.bind(this),
+      momentumStopOnAxis: this._onMomentumStopOnAxis.bind(this)
     };
 
     lodash.forEach(this._private.boundMomentumHandlers, (handler, eventName) => {
@@ -331,7 +331,7 @@ export default class ShbScroll {
   }
 
 
-  _onBounceToPosition(event) {
+  _onBouncePush(event) {
     // bounce will send us a coordinate pair, but only the coordinate for the active axis is
     // meaningful, which causes problems in 2d-scrollable objects; this would better be avoided by
     // removing the axis-separation logic in bounce and instead always using a target, similarly
@@ -376,7 +376,7 @@ export default class ShbScroll {
   }
 
 
-  _onPushBy(event) {
+  _onPush(event) {
     let pushBy = event.data,
       newCoordinates = {
         x: this._private.moveable.x.position,

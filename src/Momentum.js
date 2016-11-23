@@ -31,11 +31,11 @@ let defaults = {
 
 
 let events = {
-  pushBy: 'pushBy',
-  start: 'start',
-  startOnAxis: 'startOnAxis',
-  stopOnAxis: 'stopOnAxis',
-  stop: 'stop'
+  momentumStart: 'momentumStart',
+  momentumStartOnAxis: 'momentumStartOnAxis',
+  momentumPush: 'momentumPush',
+  momentumStop: 'momentumStop',
+  momentumStopOnAxis: 'momentumStopOnAxis'
 };
 
 
@@ -78,10 +78,10 @@ export default class Momentum {
     this._private.currentFrame = requestAnimationFrame(this._private.boundMomentum);
 
     this._forXY((xy) => {
-      if (!wasActive[xy]) this.dispatchEvent(new Event(events.startOnAxis), { axis: xy });
+      if (!wasActive[xy]) this.dispatchEvent(new Event(events.momentumStartOnAxis), { axis: xy });
     });
 
-    if (!wasActive.x && !wasActive.y) this.dispatchEvent(new Event(events.start));
+    if (!wasActive.x && !wasActive.y) this.dispatchEvent(new Event(events.momentumStart));
   }
 
 
@@ -96,11 +96,11 @@ export default class Momentum {
       this._private.currentMomentum[axis].pxPerFrame = 0;
       this._state.isActive[axis] = false;
 
-      this.dispatchEvent(new Event(events.stopOnAxis), { axis: axis });
+      this.dispatchEvent(new Event(events.momentumStopOnAxis), { axis: axis });
 
       if (!this._state.isActive.x && !this._state.isActive.y) {
         cancelAnimationFrame(this._private.currentFrame);
-        this.dispatchEvent(new Event(events.stop));
+        this.dispatchEvent(new Event(events.momentumStop));
       }
     }
   }
@@ -110,17 +110,17 @@ export default class Momentum {
 
 
   _runMomentum() {
-    let pushBy = {
+    let momentumPush = {
       x: { direction: 0, px: 0 },
       y: { direction: 0, px: 0 }
     };
 
     this._forXY((xy) => {
-      // while the amount of momentum is meaningful on this axis, compose the pushBy event data
+      // while the amount of momentum is meaningful on this axis, compose the momentumPush event data
       // and decrease the momentum
       if (this._private.currentMomentum[xy].pxPerFrame >= this._config.minPxPerFrame) {
-        pushBy[xy].direction = this._private.currentMomentum[xy].direction;
-        pushBy[xy].px = this._private.currentMomentum[xy].pxPerFrame;
+        momentumPush[xy].direction = this._private.currentMomentum[xy].direction;
+        momentumPush[xy].px = this._private.currentMomentum[xy].pxPerFrame;
 
         // decrease pxPerFrame to decrease scroll speed
         this._private.currentMomentum[xy].pxPerFrame -= this._config.subtractMomentumPerFrame;
@@ -134,7 +134,7 @@ export default class Momentum {
       this.stop();
     }
     else {
-      this.dispatchEvent(new Event(events.pushBy), pushBy);
+      this.dispatchEvent(new Event(events.momentumPush), momentumPush);
       this._private.currentFrame = requestAnimationFrame(this._private.boundMomentum);
     }
   }

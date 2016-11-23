@@ -26,7 +26,7 @@ let defaults = {
 let events = {
   bounceStart: 'bounceStart',
   bounceStartOnAxis: 'bounceStartOnAxis',
-  bounceToPosition: 'bounceToPosition',
+  bouncePush: 'bouncePush',
   bounceEnd: 'bounceEnd',
   bounceEndOnAxis: 'bounceEndOnAxis'
 };
@@ -114,7 +114,7 @@ export default class Bounce {
       }
     });
 
-    this.dispatchEvent(new Event(events.bounceToPosition), this._private.currentPosition);
+    this.dispatchEvent(new Event(events.bouncePush), this._private.currentPosition);
 
     if (this._state.isActive.x || this._state.isActive.y) {
       this._private.currentFrame = requestAnimationFrame(this._private.boundBounce);
