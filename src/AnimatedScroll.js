@@ -32,9 +32,9 @@ let defaults = {
 
 
 let events = {
-  start: 'start',
-  scrollTo: 'scrollTo',
-  stop: 'stop'
+  scrollStart: 'scrollStart',
+  scrollPush: 'scrollPush',
+  scrollStop: 'scrollStop'
 };
 
 
@@ -93,7 +93,7 @@ export default class AnimatedScroll {
 
     this._private.currentFrame = requestAnimationFrame(this._private.boundAnimatedScroll);
 
-    this.dispatchEvent(new Event(events.start));
+    this.dispatchEvent(new Event(events.scrollStart));
   }
 
 
@@ -104,7 +104,7 @@ export default class AnimatedScroll {
     this._state.isActive = false;
 
     cancelAnimationFrame(this._private.currentFrame);
-    this.dispatchEvent(new Event(events.stop));
+    this.dispatchEvent(new Event(events.scrollStop));
   }
 
 
@@ -143,7 +143,8 @@ export default class AnimatedScroll {
       this._forXY((xy) => {
         this._private.currentPosition[xy] = this._private.targetPosition[xy];
       });
-      this.dispatchEvent(new Event(events.scrollTo), this._private.targetPosition);
+
+      this.dispatchEvent(new Event(events.scrollPush), this._private.targetPosition);
       this.stop();
     }
     // otherwise move towards target
@@ -151,7 +152,8 @@ export default class AnimatedScroll {
       this._forXY((xy) => {
         this._private.currentPosition[xy] += this._private.pxPerFrame * this._private.direction[xy];
       });
-      this.dispatchEvent(new Event(events.scrollTo), this._private.currentPosition);
+
+      this.dispatchEvent(new Event(events.scrollPush), this._private.currentPosition);
       this._private.currentFrame = requestAnimationFrame(this._private.boundAnimatedScroll);
     }
   }

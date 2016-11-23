@@ -222,16 +222,6 @@ export default class ShbScroll {
       this.shbTouch.addEventListener(eventName, handler);
     });
 
-    this._private.boundBounceHandlers = {
-      bounceStartOnAxis: this._onBounceStartOnAxis.bind(this),
-      bouncePush: this._onBouncePush.bind(this),
-      bounceEndOnAxis: this._onBounceEndOnAxis.bind(this),
-    };
-
-    lodash.forEach(this._private.boundBounceHandlers, (handler, eventName) => {
-      this.bounce.addEventListener(eventName, handler);
-    });
-
     this._private.boundMomentumHandlers = {
       momentumStartOnAxis: this._onMomentumStartOnAxis.bind(this),
       momentumPush: this._onPush.bind(this),
@@ -243,10 +233,20 @@ export default class ShbScroll {
       this.momentum.addEventListener(eventName, handler);
     });
 
+    this._private.boundBounceHandlers = {
+      bounceStartOnAxis: this._onBounceStartOnAxis.bind(this),
+      bouncePush: this._onBouncePush.bind(this),
+      bounceEndOnAxis: this._onBounceEndOnAxis.bind(this),
+    };
+
+    lodash.forEach(this._private.boundBounceHandlers, (handler, eventName) => {
+      this.bounce.addEventListener(eventName, handler);
+    });
+
     this._private.boundAnimatedScrollHandlers = {
-      start: this._onAnimatedScrollStart.bind(this),
-      scrollTo: this._onAnimatedScrollTo.bind(this),
-      stop: this._onAnimatedScrollStop.bind(this)
+      scrollStart: this._onAnimatedScrollStart.bind(this),
+      scrollPush: this._onAnimatedScrollPush.bind(this),
+      scrollStop: this._onAnimatedScrollStop.bind(this)
     };
 
     lodash.forEach(this._private.boundAnimatedScrollHandlers, (handler, eventName) => {
@@ -371,7 +371,7 @@ export default class ShbScroll {
   }
 
 
-  _onAnimatedScrollTo(event) {
+  _onAnimatedScrollPush(event) {
     this._updateCoords(event.data);
   }
 
