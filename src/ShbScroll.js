@@ -133,14 +133,37 @@ export default class ShbScroll {
   // PUBLIC
 
 
-  refresh(config) {
-    if (config) lodash.merge(this._config, config);
-    requestAnimationFrame(() => this._calculateParams());
+  scrollTo(x, y, animateTime) {
+    this.animatedScroll.stop();
+    this.momentum.stop();
+    this.bounce.stop();
+
+    let targetPosition = this._getClosestScrollTarget({ x, y });
+
+    if (animateTime) {
+      this.animatedScroll.start(
+        { x: this._private.moveable.x.position, y: this._private.moveable.y.position },
+        targetPosition,
+        animateTime);
+    }
+    else {
+      this._updateCoords(targetPosition);
+    }
   }
 
 
-  setPositionPercentage(positionPercentage) {
-    this.scrollToPercentage(positionPercentage, positionPercentage);
+  scrollBy(x, y, animateTime) {
+    this.scrollTo(this._private.moveable.x.position + x, this._private.moveable.y.position + y, animateTime);
+  }
+
+
+  scrollTop(animateTime) {
+    this.scrollTo(this._private.moveable.x.position, this._private.boundaries.y.start, animateTime);
+  }
+
+
+  scrollBottom(animateTime) {
+    this.scrollTo(this._private.moveable.x.position, this._private.boundaries.y.end, animateTime);
   }
 
 
@@ -158,49 +181,26 @@ export default class ShbScroll {
   }
 
 
-  scrollTo(left, top, shouldAnimate, scrollSpeed) {
-    if (this._private.isScrollFrozen) return;
-
-    this.animatedScroll.stopAnimatedScroll();
-    this.momentum.stopMomentum();
-    this.bounce.stop();
-
-    let targetPosition = this._getClosestScrollTarget({ x: left, y: top });
-
-    if (shouldAnimate) {
-      this.animatedScroll.startAnimatedScroll({ x: this._private.moveable.x.position, y: this._private.moveable.y.position }, targetPosition, scrollSpeed);
-    }
-    else {
-      this._updateCoords(targetPosition);
-    }
-  }
-
-
-  scrollBy(left, top, shouldAnimate, scrollSpeed) {
-    this.scrollTo(this._private.moveable.x.position +left, this._private.moveable.y.position + top, shouldAnimate, scrollSpeed);
-  }
-
-
-  scrollTop(shouldAnimate, scrollSpeed) {
-    this.scrollTo(this._private.moveable.x.position, this._private.boundaries.y.start, shouldAnimate, scrollSpeed);
-  }
-
-
-  scrollBottom(shouldAnimate, scrollSpeed) {
-    this.scrollTo(this._private.moveable.x.position, this._private.boundaries.y.end, shouldAnimate, scrollSpeed);
-  }
-
-
   disableScrolling(isDisabled) {
-    this.momentum.stopMomentum();
+    this.momentum.stop();
     this.animatedScroll.stop();
     this.shbTouch.disableScrolling(isDisabled);
+  }
+
+
+  refresh(config) {
+    if (config) lodash.merge(this._config, config);
+    requestAnimationFrame(() => this._calculateParams());
   }
 
 
   destroy() {
     this._unbindEvents();
     this.shbTouch.destroy();
+
+    this.animatedScroll.stop();
+    this.momentum.stop();
+    this.bounce.stop();
 
     this._config.container = null;
     this._config.moveable = null;
@@ -309,7 +309,7 @@ export default class ShbScroll {
   _onTouchStart() {
     this._state.isTouchActive = true;
     this.bounce.stop();
-    this.momentum.stopMomentum();
+    this.momentum.stop();
   }
 
 
@@ -431,7 +431,7 @@ export default class ShbScroll {
         }
       }
 
-      if (stopMomentum) this.momentum.stopMomentumOnAxis(xy);
+      if (stopMomentum) this.momentum.stopOnAxis(xy);
     });
 
     this._updateCoords(newCoordinates);
@@ -440,7 +440,7 @@ export default class ShbScroll {
 
   _onTouchEndWithMomentum(event) {
     if (this._private.moveable.x.overscroll > 0 || this._private.moveable.y.overscroll > 0) return;
-    this.momentum.startMomentum(event.data);
+    this.momentum.start(event.data);
   }
 
 
@@ -458,12 +458,12 @@ export default class ShbScroll {
     if (this._state.isTouchActive || this._state.isBouncingOnAxis[axis] || this._state.isMomentumOnAxis[axis]) return;
 
     if (this._private.moveable[axis].position < this._private.boundaries[axis].start) {
-      if (this._private.axis.length > 1) this.momentum.stopMomentum();
-      this.bounce.bounceToTargetOnAxis(axis, this._private.moveable[axis].position, this._private.boundaries[axis].start);
+      if (this._private.axis.length > 1) this.momentum.stop();
+      this.bounce.startBounceOnAxis(axis, this._private.moveable[axis].position, this._private.boundaries[axis].start);
     }
     else if (this._private.moveable[axis].position > this._private.boundaries[axis].end) {
-      if (this._private.axis.length > 1) this.momentum.stopMomentum();
-      this.bounce.bounceToTargetOnAxis(axis, this._private.moveable[axis].position, this._private.boundaries[axis].end);
+      if (this._private.axis.length > 1) this.momentum.stop();
+      this.bounce.startBounceOnAxis(axis, this._private.moveable[axis].position, this._private.boundaries[axis].end);
     }
   }
 

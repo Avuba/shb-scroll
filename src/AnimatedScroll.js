@@ -57,7 +57,7 @@ export default class AnimatedScroll {
   // PUBLIC
 
 
-  startAnimatedScroll(startPosition, targetPosition, scrollSpeed) {
+  start(startPosition, targetPosition, scrollSpeed) {
     if (this._state.isActive) cancelAnimationFrame(this._private.currentFrame);
 
     this._state.isActive = true;
@@ -97,7 +97,7 @@ export default class AnimatedScroll {
   }
 
 
-  stopAnimatedScroll() {
+  stop() {
     if (!this._state.isActive) return;
 
     this._private.pxPerFrame = 0;
@@ -144,7 +144,7 @@ export default class AnimatedScroll {
         this._private.currentPosition[xy] = this._private.targetPosition[xy];
       });
       this.dispatchEvent(new Event(events.scrollTo), this._private.targetPosition);
-      this.stopAnimatedScroll();
+      this.stop();
     }
     // otherwise move towards target
     else {

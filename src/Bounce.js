@@ -51,35 +51,15 @@ export default class Bounce {
   // PUBLIC
 
 
-  bounceToTarget(startPosition, targetPosition, animateTime) {
-    this._forXY((xy) => {
-      this._startBounceOnAxis(xy, startPosition[xy], targetPosition[xy], animateTime);
-    });
-  }
-
-
-  bounceToTargetOnAxis(axis, startPositionOnAxis, targetPositionOnAxis, animateTime) {
-    this._startBounceOnAxis(axis, startPositionOnAxis, targetPositionOnAxis, animateTime);
-  }
-
-
-  stop() {
-    this._stopBounce();
-  }
-
-
-  // LIFECYCLE
-
-
-  _startBounceOnAxis(axis, startPositionPx, targetPositionPx, animateTime) {
+  startBounceOnAxis(axis, startPosition, targetPosition, animateTime) {
     cancelAnimationFrame(this._private.currentFrame);
 
     let isBounceStart = !this._state.isActive.x && !this._state.isActive.y;
 
     this._state.isActive[axis] = true;
-    this._private.startPosition[axis] = startPositionPx;
-    this._private.currentPosition[axis] = startPositionPx;
-    this._private.targetPosition[axis] = targetPositionPx;
+    this._private.startPosition[axis] = startPosition;
+    this._private.currentPosition[axis] = startPosition;
+    this._private.targetPosition[axis] = targetPosition;
     this._private.startTime[axis] = Date.now();
     this._private.animateTime[axis] = animateTime > 0 ? animateTime : this._config.bounceTime;
 
@@ -88,6 +68,22 @@ export default class Bounce {
 
     this._private.currentFrame = requestAnimationFrame(this._private.boundBounce);
   }
+
+
+  stop() {
+    this._forXY((xy) => {
+      if (this._state.isActive[xy]) {
+        this._state.isActive[xy] = false;
+        this.dispatchEvent(new Event(events.bounceEndOnAxis), { axis: xy });
+      }
+    });
+
+    cancelAnimationFrame(this._private.currentFrame);
+    this.dispatchEvent(new Event(events.bounceEnd));
+  }
+
+
+  // LIFECYCLE
 
 
   _runBounce() {
@@ -124,21 +120,8 @@ export default class Bounce {
       this._private.currentFrame = requestAnimationFrame(this._private.boundBounce);
     }
     else {
-      this._stopBounce();
+      this.stop();
     }
-  }
-
-
-  _stopBounce() {
-    this._forXY((xy) => {
-      if (this._state.isActive[xy]) {
-        this._state.isActive[xy] = false;
-        this.dispatchEvent(new Event(events.bounceEndOnAxis), { axis: xy });
-      }
-    });
-
-    cancelAnimationFrame(this._private.currentFrame);
-    this.dispatchEvent(new Event(events.bounceEnd));
   }
 
 

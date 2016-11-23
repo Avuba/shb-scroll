@@ -58,7 +58,7 @@ export default class Momentum {
   // PUBLIC
 
 
-  startMomentum(momentum) {
+  start(momentum) {
     let wasActive = {
       x: this._state.isActive.x,
       y: this._state.isActive.y
@@ -85,14 +85,12 @@ export default class Momentum {
   }
 
 
-  stopMomentum() {
-    this._forXY((xy) => {
-      this.stopMomentumOnAxis(xy);
-    });
+  stop() {
+    this._forXY((xy) => this.stopOnAxis(xy));
   }
 
 
-  stopMomentumOnAxis(axis) {
+  stopOnAxis(axis) {
     if (this._state.isActive[axis]) {
       this._private.currentMomentum[axis].direction = 0;
       this._private.currentMomentum[axis].pxPerFrame = 0;
@@ -128,12 +126,12 @@ export default class Momentum {
         this._private.currentMomentum[xy].pxPerFrame -= this._config.subtractMomentumPerFrame;
       }
       else {
-        this.stopMomentumOnAxis(xy);
+        this.stopOnAxis(xy);
       }
     });
 
     if (!this._state.isActive.x && !this._state.isActive.y) {
-      this.stopMomentum();
+      this.stop();
     }
     else {
       this.dispatchEvent(new Event(events.pushBy), pushBy);
