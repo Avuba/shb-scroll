@@ -126,7 +126,7 @@ export default class ShbScroll {
     this.momentum.stop();
     this.bounce.stop();
 
-    let targetPosition = this._getClosestScrollTarget({ x, y });
+    let targetPosition = this._getScrollTarget({ x, y });
 
     if (animateTime) {
       this.animatedScroll.start(
@@ -358,7 +358,6 @@ export default class ShbScroll {
 
 
   _onTouchEnd() {
-    console.log('touch end');
     this._state.isTouchActive = false;
     this._checkForBounceStart();
     this._checkForPositionStable();
@@ -415,8 +414,6 @@ export default class ShbScroll {
 
 
   _onAnimatedScrollEnd() {
-    console.log(_onAnimatedScrollEnd);
-
     this._state.isAnimatedScrolling = false;
     this._checkForPositionStable();
   }
@@ -433,7 +430,9 @@ export default class ShbScroll {
 
 
   _checkForBounceStartOnAxis(axis) {
-    if (this._state.isTouchActive || this._state.isBouncingOnAxis[axis] || this._state.isMomentumOnAxis[axis]) return;
+    if (this._state.isTouchActive
+        || this._state.isBouncingOnAxis[axis]
+        || this._state.isMomentumOnAxis[axis]) return;
 
     if (this._private.moveable[axis].position < this._private.boundaries[axis].start) {
       this.momentum.stopOnAxis(axis);
@@ -447,13 +446,12 @@ export default class ShbScroll {
 
 
   _checkForPositionStable() {
-    console.log('_checkForPositionStable');
+    if (this._state.isTouchActive
+        || this._state.isAnimatedScrolling
+        || this._state.isBouncingOnAxis.x || this._state.isBouncingOnAxis.y
+        || this._state.isMomentumOnAxis.x || this._state.isMomentumOnAxis.y) return;
 
-    if (!this._state.isTouchActive && !this._state.isAnimatedScrolling
-        && !this._state.isBouncingOnAxis.x && !this._state.isBouncingOnAxis.y
-        && !this._state.isMomentumOnAxis.x && !this._state.isMomentumOnAxis.y) {
-      this.dispatchEvent(new Event(events.positionStable), lodash.cloneDeep(this._private.moveable));
-    }
+    this.dispatchEvent(new Event(events.positionStable), lodash.cloneDeep(this._private.moveable));
   }
 
 
@@ -462,17 +460,14 @@ export default class ShbScroll {
 
   _updateMoveabelPosition(newCoordinates) {
     this._forXY((xy) => {
-
-      // DEAL WITH OVERSCROLLING
-
       if (this._config.overscroll) {
         let boundaries = this._private.boundaries;
 
-        // check on axis start (left or top)
+        // overscrolling on axis start (left or top)
         if (newCoordinates[xy] < boundaries[xy].start) {
           this._private.moveable[xy].overscroll = boundaries[xy].start - newCoordinates[xy];
         }
-        // check on axis end (right or bottom)
+        // overscrolling on axis start (right or bottom)
         else if (newCoordinates[xy] > boundaries[xy].end) {
           this._private.moveable[xy].overscroll = newCoordinates[xy] - boundaries[xy].end;
         }
@@ -482,16 +477,15 @@ export default class ShbScroll {
       }
     });
 
-    // APPLY NEW COORDINATES AND DISPATCH EVENT
-
-    let moveable = this._private.moveable;
-
-    if (moveable.x.position !== newCoordinates.x || moveable.y.position !== newCoordinates.y) {
+    if (this._private.moveable.x.position !== newCoordinates.x
+        || this._private.moveable.y.position !== newCoordinates.y) {
       this._forXY((xy) => {
-        moveable[xy].position = newCoordinates[xy];
+        this._private.moveable[xy].position = newCoordinates[xy];
 
         if (this._private.boundaries[xy].end > 0) {
-          moveable[xy].progress = moveable[xy].position / this._private.boundaries[xy].end;
+          this._private.moveable[xy].progress = this._private.moveable[xy].position / this._private.boundaries[xy].end;
+        } else {
+          this._private.moveable[xy].progress = 1;
         }
       });
 
@@ -514,7 +508,7 @@ export default class ShbScroll {
   }
 
 
-  _getClosestScrollTarget(position) {
+  _getScrollTarget(position) {
     let scrollTarget = { x: 0, y: 0 };
 
     this._forXY((xy) => {
