@@ -11,7 +11,7 @@ let defaults = {
     minPxPerFrame: 0.5,
 
     // speed to be subtracted from pxPerFrame per frame when momentum is active
-    subtractMomentumPerFrame: 0.2,
+    subtractPxPerFrame: 0.2,
 
     // decide what axis to allow scrolling on, gets translated into an array by
     // the class constructor
@@ -59,29 +59,25 @@ export default class Momentum {
 
 
   start(momentum) {
-    let wasActive = {
-      x: this._state.isActive.x,
-      y: this._state.isActive.y
-    };
+    cancelAnimationFrame(this._private.currentFrame);
 
-    // limit pixel per frame
+    if (!this._state.isActive.x && !this._state.isActive.y) this.dispatchEvent(new Event(events.momentumStart));
+    this._private.currentMomentum = momentum;
+
     this._forXY((xy) => {
       if (momentum[xy].pxPerFrame > 0) {
-        if (momentum[xy].pxPerFrame > this._config.maxPxPerFrame) momentum[xy].pxPerFrame = this._config.maxPxPerFrame;
-        this._state.isActive[xy] = true;
+        if (momentum[xy].pxPerFrame > this._config.maxPxPerFrame) {
+          momentum[xy].pxPerFrame = this._config.maxPxPerFrame;
+        }
+
+        if (!this._state.isActive[xy]) {
+          this._state.isActive[xy] = true;
+          this.dispatchEvent(new Event(events.momentumStartOnAxis), { axis: xy });
+        }
       }
     });
 
-    this._private.currentMomentum = momentum;
-
-    cancelAnimationFrame(this._private.currentFrame);
     this._private.currentFrame = requestAnimationFrame(this._private.boundMomentum);
-
-    this._forXY((xy) => {
-      if (!wasActive[xy]) this.dispatchEvent(new Event(events.momentumStartOnAxis), { axis: xy });
-    });
-
-    if (!wasActive.x && !wasActive.y) this.dispatchEvent(new Event(events.momentumStart));
   }
 
 
@@ -97,7 +93,7 @@ export default class Momentum {
     this._private.currentMomentum[axis].pxPerFrame = 0;
     this._state.isActive[axis] = false;
 
-    this.dispatchEvent(new Event(events.momentumStopOnAxis), { axis: axis });
+    this.dispatchEvent(new Event(events.momentumStopOnAxis), { axis });
 
     if (!this._state.isActive.x && !this._state.isActive.y) {
       cancelAnimationFrame(this._private.currentFrame);
@@ -120,8 +116,8 @@ export default class Momentum {
         momentumPush[xy].direction = this._private.currentMomentum[xy].direction;
         momentumPush[xy].px = this._private.currentMomentum[xy].pxPerFrame;
 
-        // decrease pxPerFrame to decrease scroll speed
-        this._private.currentMomentum[xy].pxPerFrame -= this._config.subtractMomentumPerFrame;
+        // decrease the speed with every frame
+        this._private.currentMomentum[xy].pxPerFrame -= this._config.subtractPxPerFrame;
       }
       else {
         this.stopOnAxis(xy);

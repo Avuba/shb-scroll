@@ -26,7 +26,7 @@ let defaults = {
 let events = {
   bounceStart: 'bounceStart',
   bounceStartOnAxis: 'bounceStartOnAxis',
-  bouncePush: 'bouncePush',
+  bouncePositionChange: 'bouncePositionChange',
   bounceEnd: 'bounceEnd',
   bounceEndOnAxis: 'bounceEndOnAxis'
 };
@@ -104,9 +104,9 @@ export default class Bounce {
       }
     });
 
-    // we have to fire the bouncePush even if the bounce has to stop on one axis to make sure
+    // we have to fire bouncePositionChange even if the bounce has to stop on one axis to make sure
     // that this specific axis reaches the targetPosition
-    this.dispatchEvent(new Event(events.bouncePush), this._private.currentPosition);
+    this.dispatchEvent(new Event(events.bouncePositionChange), this._private.currentPosition);
 
     this._forXY((xy) => {
       if (shouldBounceEnd[xy]) this._stopOnAxis(xy)

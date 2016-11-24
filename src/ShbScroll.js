@@ -106,7 +106,7 @@ let defaults = {
 
 
 let events = {
-  positionChanged: 'positionChanged',
+  positionChange: 'positionChange',
   positionStable: 'positionStable'
 };
 
@@ -120,9 +120,12 @@ export default class ShbScroll {
     if (config) lodash.merge(this._config, config);
     this._private.axis = this._config.axis.split('');
 
+    // both fire a "push" event with a relative direction
     this.shbTouch = new ShbTouch(this._config);
-    this.bounce = new Bounce(this._config);
     this.momentum = new Momentum(this._config);
+
+    // both fire a "positionChange" event including an absolute position
+    this.bounce = new Bounce(this._config);
     this.animatedScroll = new AnimatedScroll(this._config);
 
     this.events = events;
@@ -238,7 +241,7 @@ export default class ShbScroll {
 
     this._private.boundBounceHandlers = {
       bounceStartOnAxis: this._onBounceStartOnAxis.bind(this),
-      bouncePush: this._onBouncePush.bind(this),
+      bouncePositionChange: this._onBouncePositionChange.bind(this),
       bounceEndOnAxis: this._onBounceEndOnAxis.bind(this),
     };
 
@@ -385,6 +388,7 @@ export default class ShbScroll {
 
 
   _onMomentumStartOnAxis(event) {
+    console.log('_onMomentumStartOnAxis');
     this._state.isMomentumOnAxis[event.data.axis] = true;
   }
 
@@ -396,24 +400,20 @@ export default class ShbScroll {
 
 
   _onMomentumStopOnAxis(event) {
-    console.log('_onMomentumStopOnAxis', event.data.axis);
-
+    console.log('_onMomentumStopOnAxis');
     this._state.isMomentumOnAxis[event.data.axis] = false;
     this._checkForBounceStartOnAxis(event.data.axis);
   }
 
 
   _onBounceStartOnAxis(event) {
-    console.log('_onBounceStartOnAxis');
     this._state.isBouncingOnAxis[event.data.axis] = true;
   }
 
 
-  _onBouncePush(event) {
-    // bounce will send us a coordinate pair, but only the coordinate for the active axis is
-    // meaningful, which causes problems in 2d-scrollable objects; this would better be avoided by
-    // removing the axis-separation logic in bounce and instead always using a target, similarly
-    // to what happens in animated scroll
+  _onBouncePositionChange(event) {
+    // we only care about the update position of the axis where bounce is actually active. this
+    // enables us to run Bounce and Momentum at the same time
     let newPosition = {
       x: this._state.isBouncingOnAxis.x ? event.data.x : this._private.moveable.x.position,
       y: this._state.isBouncingOnAxis.y ? event.data.y : this._private.moveable.y.position
@@ -459,12 +459,10 @@ export default class ShbScroll {
     if (this._state.isTouchActive || this._state.isBouncingOnAxis[axis] || this._state.isMomentumOnAxis[axis]) return;
 
     if (this._private.moveable[axis].position < this._private.boundaries[axis].start) {
-      // if (this._private.axis.length > 1) this.momentum.stopOnAxis(axis);
       this.momentum.stopOnAxis(axis);
       this.bounce.startOnAxis(axis, this._private.moveable[axis].position, this._private.boundaries[axis].start);
     }
     else if (this._private.moveable[axis].position > this._private.boundaries[axis].end) {
-      // if (this._private.axis.length > 1) this.momentum.stopOnAxis(axis);
       this.momentum.stopOnAxis(axis);
       this.bounce.startOnAxis(axis, this._private.moveable[axis].position, this._private.boundaries[axis].end);
     }
@@ -520,7 +518,7 @@ export default class ShbScroll {
 
       // TODO: not sure if requestAnimationFrame is needed here
       requestAnimationFrame(() => this._updateMoveablePosition());
-      this.dispatchEvent(new Event(events.positionChanged), lodash.cloneDeep(this._private.moveable));
+      this.dispatchEvent(new Event(events.positionChange), lodash.cloneDeep(this._private.moveable));
     }
   }
 
