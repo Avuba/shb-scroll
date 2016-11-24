@@ -34,7 +34,7 @@ let defaults = {
 let events = {
   scrollStart: 'scrollStart',
   scrollPush: 'scrollPush',
-  scrollStop: 'scrollStop'
+  scrollEnd: 'scrollEnd'
 };
 
 
@@ -104,7 +104,7 @@ export default class AnimatedScroll {
     this._state.isActive = false;
 
     cancelAnimationFrame(this._private.currentFrame);
-    this.dispatchEvent(new Event(events.scrollStop));
+    this.dispatchEvent(new Event(events.scrollEnd));
   }
 
 

@@ -25,8 +25,8 @@ let events = {
   momentumStart: 'momentumStart',
   momentumStartOnAxis: 'momentumStartOnAxis',
   momentumPush: 'momentumPush',
-  momentumStop: 'momentumStop',
-  momentumStopOnAxis: 'momentumStopOnAxis'
+  momentumEnd: 'momentumEnd',
+  momentumEndOnAxis: 'momentumEndOnAxis'
 };
 
 
@@ -74,8 +74,6 @@ export default class Momentum {
 
   stop() {
     this._forXY((xy) => this.stopOnAxis(xy));
-    cancelAnimationFrame(this._private.currentFrame);
-    this.dispatchEvent(new Event(events.momentumStop));
   }
 
 
@@ -86,9 +84,12 @@ export default class Momentum {
     this._private.currentMomentum[axis].direction = 0;
     this._private.currentMomentum[axis].pxPerFrame = 0;
 
-    this.dispatchEvent(new Event(events.momentumStopOnAxis), { axis });
+    this.dispatchEvent(new Event(events.momentumEndOnAxis), { axis });
 
-    if (!this._state.isActive.x && !this._state.isActive.y) this.stop();
+    if (!this._state.isActive.x && !this._state.isActive.y) {
+      this.dispatchEvent(new Event(events.momentumEnd));
+      cancelAnimationFrame(this._private.currentFrame);
+    }
   }
 
 
@@ -117,9 +118,6 @@ export default class Momentum {
     if (this._state.isActive.x || this._state.isActive.y) {
       this.dispatchEvent(new Event(events.momentumPush), momentumPush);
       this._private.currentFrame = requestAnimationFrame(this._private.boundMomentum);
-    }
-    else {
-      this.stop();
     }
   }
 

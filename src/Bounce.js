@@ -70,9 +70,20 @@ export default class Bounce {
 
 
   stop() {
-    this._forXY((xy) => this._stopOnAxis(xy));
-    cancelAnimationFrame(this._private.currentFrame);
-    this.dispatchEvent(new Event(events.bounceEnd));
+    this._forXY((xy) => this.stopOnAxis(xy));
+  }
+
+
+  stopOnAxis(axis) {
+    if (!this._state.isActive[axis]) return;
+
+    this._state.isActive[axis] = false;
+    this.dispatchEvent(new Event(events.bounceEndOnAxis), { axis });
+
+    if (!this._state.isActive.x && !this._state.isActive.y) {
+      this.dispatchEvent(new Event(events.bounceEnd));
+      cancelAnimationFrame(this._private.currentFrame);
+    }
   }
 
 
@@ -110,22 +121,12 @@ export default class Bounce {
 
     // only after firing the event we check what bounces to stop
     this._forXY((xy) => {
-      if (shouldBounceEnd[xy]) this._stopOnAxis(xy)
+      if (shouldBounceEnd[xy]) this.stopOnAxis(xy)
     });
 
     if (this._state.isActive.x || this._state.isActive.y) {
       this._private.currentFrame = requestAnimationFrame(this._private.boundBounce);
     }
-    else {
-      this.stop();
-    }
-  }
-
-
-  _stopOnAxis(axis) {
-    if (!this._state.isActive[axis]) return;
-    this._state.isActive[axis] = false;
-    this.dispatchEvent(new Event(events.bounceEndOnAxis), { axis });
   }
 
 

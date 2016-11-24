@@ -135,7 +135,7 @@ export default class ShbScroll {
         animateTime);
     }
     else {
-      this._updateCoords(targetPosition);
+      requestAnimationFrame(() => this._updateMoveabelPosition(targetPosition));
     }
   }
 
@@ -186,9 +186,9 @@ export default class ShbScroll {
     this._unbindEvents();
     this.shbTouch.destroy();
 
-    this.animatedScroll.stop();
     this.momentum.stop();
     this.bounce.stop();
+    this.animatedScroll.stop();
 
     this._config.container = null;
     this._config.moveable = null;
@@ -213,8 +213,8 @@ export default class ShbScroll {
     this._private.boundMomentumHandlers = {
       momentumStartOnAxis: this._onMomentumStartOnAxis.bind(this),
       momentumPush: this._onPush.bind(this),
-      momentumStop: this._onMomentumStop.bind(this),
-      momentumStopOnAxis: this._onMomentumStopOnAxis.bind(this)
+      momentumEnd: this._checkForPositionStable.bind(this),
+      momentumEndOnAxis: this._onMomentumEndOnAxis.bind(this)
     };
 
     lodash.forEach(this._private.boundMomentumHandlers, (handler, eventName) => {
@@ -224,6 +224,7 @@ export default class ShbScroll {
     this._private.boundBounceHandlers = {
       bounceStartOnAxis: this._onBounceStartOnAxis.bind(this),
       bouncePositionChange: this._onBouncePositionChange.bind(this),
+      bounceEnd: this._checkForPositionStable.bind(this),
       bounceEndOnAxis: this._onBounceEndOnAxis.bind(this),
     };
 
@@ -234,7 +235,7 @@ export default class ShbScroll {
     this._private.boundAnimatedScrollHandlers = {
       scrollStart: this._onAnimatedScrollStart.bind(this),
       scrollPush: this._onAnimatedScrollPush.bind(this),
-      scrollStop: this._onAnimatedScrollStop.bind(this)
+      scrollEnd: this._onAnimatedScrollEnd.bind(this)
     };
 
     lodash.forEach(this._private.boundAnimatedScrollHandlers, (handler, eventName) => {
@@ -352,11 +353,12 @@ export default class ShbScroll {
       if (stopMomentum) this.momentum.stopOnAxis(xy);
     });
 
-    this._updateCoords(newCoordinates);
+    this._updateMoveabelPosition(newCoordinates);
   }
 
 
   _onTouchEnd() {
+    console.log('touch end');
     this._state.isTouchActive = false;
     this._checkForBounceStart();
     this._checkForPositionStable();
@@ -374,12 +376,7 @@ export default class ShbScroll {
   }
 
 
-  _onMomentumStop() {
-    this._checkForPositionStable();
-  }
-
-
-  _onMomentumStopOnAxis(event) {
+  _onMomentumEndOnAxis(event) {
     this._state.isMomentumOnAxis[event.data.axis] = false;
     this._checkForBounceStartOnAxis(event.data.axis);
   }
@@ -398,13 +395,12 @@ export default class ShbScroll {
       y: this._state.isBouncingOnAxis.y ? event.data.y : this._private.moveable.y.position
     };
 
-    this._updateCoords(newPosition);
+    this._updateMoveabelPosition(newPosition);
   }
 
 
   _onBounceEndOnAxis(event) {
     this._state.isBouncingOnAxis[event.data.axis] = false;
-    this._checkForPositionStable();
   }
 
 
@@ -414,11 +410,13 @@ export default class ShbScroll {
 
 
   _onAnimatedScrollPush(event) {
-    this._updateCoords(event.data);
+    this._updateMoveabelPosition(event.data);
   }
 
 
-  _onAnimatedScrollStop() {
+  _onAnimatedScrollEnd() {
+    console.log(_onAnimatedScrollEnd);
+
     this._state.isAnimatedScrolling = false;
     this._checkForPositionStable();
   }
@@ -449,6 +447,8 @@ export default class ShbScroll {
 
 
   _checkForPositionStable() {
+    console.log('_checkForPositionStable');
+
     if (!this._state.isTouchActive && !this._state.isAnimatedScrolling
         && !this._state.isBouncingOnAxis.x && !this._state.isBouncingOnAxis.y
         && !this._state.isMomentumOnAxis.x && !this._state.isMomentumOnAxis.y) {
@@ -460,7 +460,7 @@ export default class ShbScroll {
   // MOVEMENT AND POSITIONING
 
 
-  _updateCoords(newCoordinates) {
+  _updateMoveabelPosition(newCoordinates) {
     this._forXY((xy) => {
 
       // DEAL WITH OVERSCROLLING
@@ -495,24 +495,18 @@ export default class ShbScroll {
         }
       });
 
-      // TODO: not sure if requestAnimationFrame is needed here
-      requestAnimationFrame(() => this._updateMoveablePosition());
+      this._updateMoveableNodePosition();
       this.dispatchEvent(new Event(events.positionChange), lodash.cloneDeep(this._private.moveable));
     }
   }
 
 
-  _updateMoveablePosition() {
+  _updateMoveableNodePosition() {
     this._config.moveable.style.webkitTransform = `translate3d(${-this._private.moveable.x.position}px, ${-this._private.moveable.y.position}px, 0px)`;
   }
 
 
   // HELPERS
-
-
-  _getPositionDistance(pos1, pos2) {
-    return Math.sqrt( (pos2.x - pos1.x) * (pos2.x - pos1.x) + (pos2.y - pos1.y) * (pos2.y - pos1.y) );
-  }
 
 
   _forXY(toExecute) {
@@ -521,21 +515,20 @@ export default class ShbScroll {
 
 
   _getClosestScrollTarget(position) {
-    let result = { x: 0, y: 0 },
-      boundaries = this._private.boundaries;
+    let scrollTarget = { x: 0, y: 0 };
 
     this._forXY((xy) => {
-      if (position[xy] < boundaries[xy].start) {
-        result[xy] = boundaries[xy].start;
+      if (position[xy] <  this._private.boundaries[xy].start) {
+        scrollTarget[xy] =  this._private.boundaries[xy].start;
       }
-      else if (position[xy] > boundaries[xy].end) {
-        result[xy] = boundaries[xy].end;
+      else if (position[xy] >  this._private.boundaries[xy].end) {
+        scrollTarget[xy] =  this._private.boundaries[xy].end;
       }
       else {
-        result[xy] = position[xy];
+        scrollTarget[xy] = position[xy];
       }
     });
 
-    return result;
+    return scrollTarget;
   }
 }
