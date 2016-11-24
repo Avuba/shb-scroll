@@ -9,8 +9,8 @@ import { default as AnimatedScroll } from './AnimatedScroll.js';
 
 let defaults = {
   config: {
-    // main container for defining the boundaries of the scrollable area and
-    // setting the event listeners. is expected to be a simple DOM node
+    // main container for defining the boundaries of the scrollable area and setting the event
+    // listeners. is expected to be a simple DOM node
     container: null,
 
     // the moveable DOM node with the actual scrollable content
@@ -20,8 +20,8 @@ let defaults = {
     // the class constructor
     axis: 'y',
 
-    // lock movement in one direction. relevant if more touch/scroll libraries
-    // are at the same spot and only the locked element should move
+    // lock movement in one direction. relevant if more touch/scroll libraries are at the same spot
+    // and only the locked element should move
     lock: false,
 
     // allow scrolling beyond the edge of moveable
@@ -46,10 +46,10 @@ let defaults = {
     minPxPerFrame: 0.2,
 
     // minimum overscroll push, under which momentum is stopped
-    minMomentumPush: 1.0,
+    minMomentumPush: 1.5,
 
     // minimum overscroll push multiplier, under which momentum is stopped
-    minMomentumMultiplier: 0.15,
+    minMomentumMultiplier: 0.25,
 
     // when set to true, listens to debounced window.resize events and calls refresh
     refreshOnResize: true
@@ -312,6 +312,7 @@ export default class ShbScroll {
     this._state.isTouchActive = true;
     this.bounce.stop();
     this.momentum.stop();
+    this.animatedScroll.stop();
   }
 
 
@@ -320,52 +321,45 @@ export default class ShbScroll {
       newCoordinates = {
         x: this._private.moveable.x.position,
         y: this._private.moveable.x.position
-      },
-      boundaries = this._private.boundaries;
+      };
 
     this._forXY((xy) => {
-      // direction obtained from ShbTouch is opposite to how we keep coordinates
-      let pxToAdd = pushBy[xy].px * (-pushBy[xy].direction),
+      // directions obtained from ShbTouch are negative, ShbScroll works with positive coordinates
+      let pxToAdd = pushBy[xy].px * pushBy[xy].direction * -1,
         stopMomentum = false;
 
-      // OVERSCROLLING IS ALLOWED
-
-      // the further you overscroll, the smaller is the displacement; this is valid for user touch
-      // but also for momentum; we multiply the displacement by a linear factor of the overscroll
-      // distance; the further the overscroll, the smaller the displacement
+      // if overscrolling is allowed, reduce the push by a linear factor of the distance. the
+      // further the overscroll, the smaller the push
       if (this._config.overscroll) {
         if (this._private.moveable[xy].overscroll > 0) {
-          // for non-touch pushes (i.e. momentum) we use a smaller overscroll maximum, so that the
-          // momentum is reduced (and stopped) earlier. this gets us closer to the iOS behavior
+          // for non-touch pushes (e.g. momentum pushes) we use a smaller maximum overscroll
           let maxOverscroll = this._state.isTouchActive ? this._config.maxTouchOverscroll : this._config.maxMomentumOverscroll,
             multiplier = utils.easeLinear(this._private.moveable[xy].overscroll, 1, -1, maxOverscroll);
 
           pxToAdd *= multiplier;
 
-          // if the source of push was momentum, and the multiplier or result are too low, we
-          // stop the momentum so that bounce can kick in
+          // we stop momentum when it becomes too slow so bounce can kick in
           if (this._state.isMomentumOnAxis[xy]
-            && (multiplier < this._config.minMomentumMultiplier || Math.abs(pxToAdd) < this._config.minMomentumPush)) {
+            && (multiplier < this._config.minMomentumMultiplier
+              || Math.abs(pxToAdd) < this._config.minMomentumPush)) {
             stopMomentum = true;
           }
         }
 
         newCoordinates[xy] = this._private.moveable[xy].position + pxToAdd;
       }
-
-      // OVERSCROLLING IS NOT ALLOWED
-
+      // overscrolling is not allowed, constrain movement to the boundaries
       else {
         newCoordinates[xy] = this._private.moveable[xy].position + pxToAdd;
 
-        // check on axis start (left or top)
-        if (newCoordinates[xy] < boundaries[xy].start) {
-          newCoordinates[xy] = boundaries[xy].start;
+        // overscrolling on axis start (left or top)
+        if (newCoordinates[xy] < this._private.boundaries[xy].start) {
+          newCoordinates[xy] = this._private.boundaries[xy].start;
           stopMomentum = true;
         }
-        // check on axis end (right or bottom)
-        else if (newCoordinates[xy] > boundaries[xy].end) {
-          newCoordinates[xy] = boundaries[xy].end;
+        // overscrolling on axis end (right or bottom)
+        else if (newCoordinates[xy] > this._private.boundaries[xy].end) {
+          newCoordinates[xy] = this._private.boundaries[xy].end;
           stopMomentum = true;
         }
       }
@@ -420,6 +414,7 @@ export default class ShbScroll {
       x: this._state.isBouncingOnAxis.x ? event.data.x : this._private.moveable.x.position,
       y: this._state.isBouncingOnAxis.y ? event.data.y : this._private.moveable.y.position
     };
+
     this._updateCoords(newPosition);
   }
 

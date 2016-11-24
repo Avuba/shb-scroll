@@ -18,7 +18,10 @@ let defaults = {
   },
 
   state: {
-    isActive: { x: false, y: false }
+    isActive: {
+      x: false,
+      y: false
+    }
   }
 };
 
@@ -54,49 +57,41 @@ export default class Bounce {
   startBounceOnAxis(axis, startPosition, targetPosition, animateTime) {
     cancelAnimationFrame(this._private.currentFrame);
 
-    let isBounceStart = !this._state.isActive.x && !this._state.isActive.y;
-
+    if (!this._state.isActive.x && !this._state.isActive.y) this.dispatchEvent(new Event(events.bounceStart));
     this._state.isActive[axis] = true;
+
+    this.dispatchEvent(new Event(events.bounceStartOnAxis), { axis });
+
     this._private.startPosition[axis] = startPosition;
     this._private.currentPosition[axis] = startPosition;
     this._private.targetPosition[axis] = targetPosition;
     this._private.startTime[axis] = Date.now();
     this._private.animateTime[axis] = animateTime > 0 ? animateTime : this._config.bounceTime;
 
-    if (isBounceStart) this.dispatchEvent(new Event(events.bounceStart));
-    this.dispatchEvent(new Event(events.bounceStartOnAxis), { axis: axis });
-
     this._private.currentFrame = requestAnimationFrame(this._private.boundBounce);
   }
 
 
   stop() {
-    this._forXY((xy) => {
-      if (this._state.isActive[xy]) {
-        this._state.isActive[xy] = false;
-        this.dispatchEvent(new Event(events.bounceEndOnAxis), { axis: xy });
-      }
-    });
-
+    this._forXY((xy) => this._stopBounceOnAxis(xy));
     cancelAnimationFrame(this._private.currentFrame);
     this.dispatchEvent(new Event(events.bounceEnd));
   }
 
 
-  // LIFECYCLE
+  // PRIVATE
 
 
   _runBounce() {
+    let shouldBounceEnd = { x: false, y: false };
+
     this._forXY((xy) => {
       if (this._state.isActive[xy]) {
         let timePassed = Date.now() - this._private.startTime[xy];
 
-        // CALCULATE NEW POSITION
-
-        // we test how much time has passed and not the position. testing the position doesn't make
-        // sense because:
-        // a) exponential functions never really cross the axis;
-        // b) some ease functions will cross the axes (spring-like effect).
+        // we test the passed time instead of the position as:
+        // - exponential functions never really cross the target
+        // - some ease functions will cross the axes (spring-like effect)
         if (timePassed < this._private.animateTime[xy]) {
           this._private.currentPosition[xy] = utils.easeOutCubic(
             timePassed,
@@ -104,17 +99,21 @@ export default class Bounce {
             this._private.targetPosition[xy] - this._private.startPosition[xy],
             this._private.animateTime[xy]);
         }
-        // bounce stops on this axis: snap to target, un-flag bounce, dispatch event
+        // snap to target and tell bounce to end
         else {
           this._private.currentPosition[xy] = this._private.targetPosition[xy];
-          this._state.isActive[xy] = false;
-
-          this.dispatchEvent(new Event(events.bounceEndOnAxis), { axis: xy });
+          shouldBounceEnd[xy] = true;
         }
       }
     });
 
+    // we have to fire the bouncePush even if the bounce has to stop on one axis to make sure
+    // that this specific axis reaches the targetPosition
     this.dispatchEvent(new Event(events.bouncePush), this._private.currentPosition);
+
+    this._forXY((xy) => {
+      if (shouldBounceEnd[xy]) this._stopBounceOnAxis(xy)
+    });
 
     if (this._state.isActive.x || this._state.isActive.y) {
       this._private.currentFrame = requestAnimationFrame(this._private.boundBounce);
@@ -122,6 +121,13 @@ export default class Bounce {
     else {
       this.stop();
     }
+  }
+
+
+  _stopBounceOnAxis(axis) {
+    if (!this._state.isActive[axis]) return;
+    this._state.isActive[axis] = false;
+    this.dispatchEvent(new Event(events.bounceEndOnAxis), { axis });
   }
 
 
