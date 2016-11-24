@@ -234,7 +234,7 @@ export default class ShbScroll {
 
     this._private.boundAnimatedScrollHandlers = {
       scrollStart: this._onAnimatedScrollStart.bind(this),
-      scrollPush: this._onAnimatedScrollPush.bind(this),
+      scrollPositionChange: this._onAnimatedScrollPositionChange.bind(this),
       scrollEnd: this._onAnimatedScrollEnd.bind(this)
     };
 
@@ -408,7 +408,7 @@ export default class ShbScroll {
   }
 
 
-  _onAnimatedScrollPush(event) {
+  _onAnimatedScrollPositionChange(event) {
     this._updateMoveablePosition(event.data);
   }
 

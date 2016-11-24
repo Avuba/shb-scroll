@@ -20,8 +20,8 @@ let defaults = {
     maxPxPerFrame: 0,
     direction: {
       radians: 0,
-      x: 0,         // component weight in x, effectively cos(radians)
-      y: 0          // component weight in y, effectively sin(radians)
+      x: 0, // component weight in x, effectively cos(radians)
+      y: 0 // component weight in y, effectively sin(radians)
     }
   },
 
@@ -33,7 +33,7 @@ let defaults = {
 
 let events = {
   scrollStart: 'scrollStart',
-  scrollPush: 'scrollPush',
+  scrollPositionChange: 'scrollPositionChange',
   scrollEnd: 'scrollEnd'
 };
 
@@ -144,7 +144,7 @@ export default class AnimatedScroll {
         this._private.currentPosition[xy] = this._private.targetPosition[xy];
       });
 
-      this.dispatchEvent(new Event(events.scrollPush), this._private.targetPosition);
+      this.dispatchEvent(new Event(events.scrollPositionChange), this._private.targetPosition);
       this.stop();
     }
     // otherwise move towards target
@@ -153,7 +153,7 @@ export default class AnimatedScroll {
         this._private.currentPosition[xy] += this._private.pxPerFrame * this._private.direction[xy];
       });
 
-      this.dispatchEvent(new Event(events.scrollPush), this._private.currentPosition);
+      this.dispatchEvent(new Event(events.scrollPositionChange), this._private.currentPosition);
       this._private.currentFrame = requestAnimationFrame(this._private.boundAnimatedScroll);
     }
   }
