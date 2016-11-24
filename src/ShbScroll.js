@@ -135,7 +135,7 @@ export default class ShbScroll {
         animateTime);
     }
     else {
-      requestAnimationFrame(() => this._updateMoveabelPosition(targetPosition));
+      requestAnimationFrame(() => this._updateMoveablePosition(targetPosition));
     }
   }
 
@@ -304,7 +304,7 @@ export default class ShbScroll {
 
   _onPush(event) {
     let pushBy = event.data,
-      newCoordinates = {
+      newPosition = {
         x: this._private.moveable.x.position,
         y: this._private.moveable.x.position
       };
@@ -332,20 +332,20 @@ export default class ShbScroll {
           }
         }
 
-        newCoordinates[xy] = this._private.moveable[xy].position + pxToAdd;
+        newPosition[xy] = this._private.moveable[xy].position + pxToAdd;
       }
       // overscrolling is not allowed, constrain movement to the boundaries
       else {
-        newCoordinates[xy] = this._private.moveable[xy].position + pxToAdd;
+        newPosition[xy] = this._private.moveable[xy].position + pxToAdd;
 
         // overscrolling on axis start (left or top)
-        if (newCoordinates[xy] < this._private.boundaries[xy].start) {
-          newCoordinates[xy] = this._private.boundaries[xy].start;
+        if (newPosition[xy] < this._private.boundaries[xy].start) {
+          newPosition[xy] = this._private.boundaries[xy].start;
           stopMomentum = true;
         }
         // overscrolling on axis end (right or bottom)
-        else if (newCoordinates[xy] > this._private.boundaries[xy].end) {
-          newCoordinates[xy] = this._private.boundaries[xy].end;
+        else if (newPosition[xy] > this._private.boundaries[xy].end) {
+          newPosition[xy] = this._private.boundaries[xy].end;
           stopMomentum = true;
         }
       }
@@ -353,7 +353,7 @@ export default class ShbScroll {
       if (stopMomentum) this.momentum.stopOnAxis(xy);
     });
 
-    this._updateMoveabelPosition(newCoordinates);
+    this._updateMoveablePosition(newPosition);
   }
 
 
@@ -394,7 +394,7 @@ export default class ShbScroll {
       y: this._state.isBouncingOnAxis.y ? event.data.y : this._private.moveable.y.position
     };
 
-    this._updateMoveabelPosition(newPosition);
+    this._updateMoveablePosition(newPosition);
   }
 
 
@@ -409,7 +409,7 @@ export default class ShbScroll {
 
 
   _onAnimatedScrollPush(event) {
-    this._updateMoveabelPosition(event.data);
+    this._updateMoveablePosition(event.data);
   }
 
 
@@ -458,18 +458,18 @@ export default class ShbScroll {
   // MOVEMENT AND POSITIONING
 
 
-  _updateMoveabelPosition(newCoordinates) {
+  _updateMoveablePosition(newPosition) {
     this._forXY((xy) => {
       if (this._config.overscroll) {
         let boundaries = this._private.boundaries;
 
         // overscrolling on axis start (left or top)
-        if (newCoordinates[xy] < boundaries[xy].start) {
-          this._private.moveable[xy].overscroll = boundaries[xy].start - newCoordinates[xy];
+        if (newPosition[xy] < boundaries[xy].start) {
+          this._private.moveable[xy].overscroll = boundaries[xy].start - newPosition[xy];
         }
         // overscrolling on axis start (right or bottom)
-        else if (newCoordinates[xy] > boundaries[xy].end) {
-          this._private.moveable[xy].overscroll = newCoordinates[xy] - boundaries[xy].end;
+        else if (newPosition[xy] > boundaries[xy].end) {
+          this._private.moveable[xy].overscroll = newPosition[xy] - boundaries[xy].end;
         }
         else {
           this._private.moveable[xy].overscroll = 0;
@@ -477,10 +477,10 @@ export default class ShbScroll {
       }
     });
 
-    if (this._private.moveable.x.position !== newCoordinates.x
-        || this._private.moveable.y.position !== newCoordinates.y) {
+    if (this._private.moveable.x.position !== newPosition.x
+        || this._private.moveable.y.position !== newPosition.y) {
       this._forXY((xy) => {
-        this._private.moveable[xy].position = newCoordinates[xy];
+        this._private.moveable[xy].position = newPosition[xy];
 
         if (this._private.boundaries[xy].end > 0) {
           this._private.moveable[xy].progress = this._private.moveable[xy].position / this._private.boundaries[xy].end;
