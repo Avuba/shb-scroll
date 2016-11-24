@@ -121,18 +121,18 @@ export default class ShbScroll {
   // PUBLIC
 
 
-  scrollTo(x, y, animateTime) {
-    this.animatedScroll.stop();
+  scrollTo(position, animateTime) {
     this.momentum.stop();
     this.bounce.stop();
+    this.animatedScroll.stop();
 
-    let targetPosition = this._getScrollTarget({ x, y });
+    let targetPosition = this._getScrollTarget(position);
 
     if (animateTime) {
-      this.animatedScroll.start(
-        { x: this._private.moveable.x.position, y: this._private.moveable.y.position },
-        targetPosition,
-        animateTime);
+      this.animatedScroll.start({
+        x: this._private.moveable.x.position,
+        y: this._private.moveable.y.position
+      }, targetPosition, animateTime);
     }
     else {
       requestAnimationFrame(() => this._updateMoveablePosition(targetPosition));
@@ -140,8 +140,13 @@ export default class ShbScroll {
   }
 
 
-  scrollBy(x, y, animateTime) {
-    this.scrollTo(this._private.moveable.x.position + x, this._private.moveable.y.position + y, animateTime);
+  scrollBy(position, animateTime) {
+    let { x = 0, y = 0 } = position;
+
+    this.scrollTo({
+      x: this._private.moveable.x.position + x,
+      y: this._private.moveable.y.position + y,
+    }, animateTime);
   }
 
 
@@ -152,20 +157,6 @@ export default class ShbScroll {
 
   scrollBottom(animateTime) {
     this.scrollTo(this._private.moveable.x.position, this._private.boundaries.y.end, animateTime);
-  }
-
-
-  scrollToPercentage(left, top, shouldAnimate, scrollSpeed) {
-    let percentage = { x: left, y: top },
-      range = { x: 0, y: 0 },
-      position = { x: 0, y: 0 };
-
-    this._forXY((xy) => {
-      range[xy] = this._private.boundaries[xy].end - this._private.boundaries[xy].start;
-      position[xy] = this._private.boundaries[xy].start + (range[xy] * percentage[xy]);
-    });
-
-    this.scrollTo(position.x, position.y, shouldAnimate, scrollSpeed);
   }
 
 
@@ -296,8 +287,8 @@ export default class ShbScroll {
 
   _onTouchStart() {
     this._state.isTouchActive = true;
-    this.bounce.stop();
     this.momentum.stop();
+    this.bounce.stop();
     this.animatedScroll.stop();
   }
 
@@ -512,7 +503,10 @@ export default class ShbScroll {
     let scrollTarget = { x: 0, y: 0 };
 
     this._forXY((xy) => {
-      if (position[xy] <  this._private.boundaries[xy].start) {
+      if (!position[xy]) {
+        scrollTarget[xy] = this._private.moveable[xy].position;
+      }
+      else if (position[xy] <  this._private.boundaries[xy].start) {
         scrollTarget[xy] =  this._private.boundaries[xy].start;
       }
       else if (position[xy] >  this._private.boundaries[xy].end) {
