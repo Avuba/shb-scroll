@@ -18,10 +18,7 @@ let defaults = {
   },
 
   state: {
-    isActive: {
-      x: false,
-      y: false
-    }
+    isActive: { x: false, y: false }
   }
 };
 
@@ -54,7 +51,7 @@ export default class Bounce {
   // PUBLIC
 
 
-  startBounceOnAxis(axis, startPosition, targetPosition, animateTime) {
+  startOnAxis(axis, startPosition, targetPosition, animateTime) {
     cancelAnimationFrame(this._private.currentFrame);
 
     if (!this._state.isActive.x && !this._state.isActive.y) this.dispatchEvent(new Event(events.bounceStart));
@@ -73,7 +70,7 @@ export default class Bounce {
 
 
   stop() {
-    this._forXY((xy) => this._stopBounceOnAxis(xy));
+    this._forXY((xy) => this._stopOnAxis(xy));
     cancelAnimationFrame(this._private.currentFrame);
     this.dispatchEvent(new Event(events.bounceEnd));
   }
@@ -112,7 +109,7 @@ export default class Bounce {
     this.dispatchEvent(new Event(events.bouncePush), this._private.currentPosition);
 
     this._forXY((xy) => {
-      if (shouldBounceEnd[xy]) this._stopBounceOnAxis(xy)
+      if (shouldBounceEnd[xy]) this._stopOnAxis(xy)
     });
 
     if (this._state.isActive.x || this._state.isActive.y) {
@@ -124,7 +121,7 @@ export default class Bounce {
   }
 
 
-  _stopBounceOnAxis(axis) {
+  _stopOnAxis(axis) {
     if (!this._state.isActive[axis]) return;
     this._state.isActive[axis] = false;
     this.dispatchEvent(new Event(events.bounceEndOnAxis), { axis });

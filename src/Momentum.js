@@ -91,22 +91,22 @@ export default class Momentum {
 
 
   stopOnAxis(axis) {
-    if (this._state.isActive[axis]) {
-      this._private.currentMomentum[axis].direction = 0;
-      this._private.currentMomentum[axis].pxPerFrame = 0;
-      this._state.isActive[axis] = false;
+    if (!this._state.isActive[axis]) return;
 
-      this.dispatchEvent(new Event(events.momentumStopOnAxis), { axis: axis });
+    this._private.currentMomentum[axis].direction = 0;
+    this._private.currentMomentum[axis].pxPerFrame = 0;
+    this._state.isActive[axis] = false;
 
-      if (!this._state.isActive.x && !this._state.isActive.y) {
-        cancelAnimationFrame(this._private.currentFrame);
-        this.dispatchEvent(new Event(events.momentumStop));
-      }
+    this.dispatchEvent(new Event(events.momentumStopOnAxis), { axis: axis });
+
+    if (!this._state.isActive.x && !this._state.isActive.y) {
+      cancelAnimationFrame(this._private.currentFrame);
+      this.dispatchEvent(new Event(events.momentumStop));
     }
   }
 
 
-  // LIFECYCLE
+  // PRIVATE
 
 
   _runMomentum() {
@@ -116,8 +116,6 @@ export default class Momentum {
     };
 
     this._forXY((xy) => {
-      // while the amount of momentum is meaningful on this axis, compose the momentumPush event data
-      // and decrease the momentum
       if (this._private.currentMomentum[xy].pxPerFrame >= this._config.minPxPerFrame) {
         momentumPush[xy].direction = this._private.currentMomentum[xy].direction;
         momentumPush[xy].px = this._private.currentMomentum[xy].pxPerFrame;

@@ -390,17 +390,21 @@ export default class ShbScroll {
 
 
   _onMomentumStop() {
+    console.log('_onMomentumStop');
     this._checkForPositionStable();
   }
 
 
   _onMomentumStopOnAxis(event) {
+    console.log('_onMomentumStopOnAxis', event.data.axis);
+
     this._state.isMomentumOnAxis[event.data.axis] = false;
     this._checkForBounceStartOnAxis(event.data.axis);
   }
 
 
   _onBounceStartOnAxis(event) {
+    console.log('_onBounceStartOnAxis');
     this._state.isBouncingOnAxis[event.data.axis] = true;
   }
 
@@ -455,12 +459,14 @@ export default class ShbScroll {
     if (this._state.isTouchActive || this._state.isBouncingOnAxis[axis] || this._state.isMomentumOnAxis[axis]) return;
 
     if (this._private.moveable[axis].position < this._private.boundaries[axis].start) {
-      if (this._private.axis.length > 1) this.momentum.stop();
-      this.bounce.startBounceOnAxis(axis, this._private.moveable[axis].position, this._private.boundaries[axis].start);
+      // if (this._private.axis.length > 1) this.momentum.stopOnAxis(axis);
+      this.momentum.stopOnAxis(axis);
+      this.bounce.startOnAxis(axis, this._private.moveable[axis].position, this._private.boundaries[axis].start);
     }
     else if (this._private.moveable[axis].position > this._private.boundaries[axis].end) {
-      if (this._private.axis.length > 1) this.momentum.stop();
-      this.bounce.startBounceOnAxis(axis, this._private.moveable[axis].position, this._private.boundaries[axis].end);
+      // if (this._private.axis.length > 1) this.momentum.stopOnAxis(axis);
+      this.momentum.stopOnAxis(axis);
+      this.bounce.startOnAxis(axis, this._private.moveable[axis].position, this._private.boundaries[axis].end);
     }
   }
 
@@ -512,6 +518,7 @@ export default class ShbScroll {
         }
       });
 
+      // TODO: not sure if requestAnimationFrame is needed here
       requestAnimationFrame(() => this._updateMoveablePosition());
       this.dispatchEvent(new Event(events.positionChanged), lodash.cloneDeep(this._private.moveable));
     }
