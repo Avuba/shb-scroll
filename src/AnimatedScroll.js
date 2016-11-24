@@ -58,21 +58,18 @@ export default class AnimatedScroll {
 
 
   start(startPosition, targetPosition, scrollSpeed) {
-    if (this._state.isActive) cancelAnimationFrame(this._private.currentFrame);
+    cancelAnimationFrame(this._private.currentFrame);
 
+    this.dispatchEvent(new Event(events.scrollStart));
     this._state.isActive = true;
 
-    // SET STARTING POSITION AND TARGET
-
-    this._forXY((xy) => {
-      this._private.startPosition[xy] = startPosition[xy];
-      this._private.currentPosition[xy] = startPosition[xy];
-      this._private.targetPosition[xy] = targetPosition[xy];
-    });
-
-    this._private.totalDistance = this._getPositionDistance(this._private.startPosition, this._private.targetPosition);
+    this._private.startPosition = startPosition;
+    this._private.currentPosition = startPosition;
+    this._private.targetPosition = targetPosition;
 
     // CALCULATE SCROLL DIRECTION
+
+    this._private.totalDistance = this._getPositionDistance(this._private.startPosition, this._private.targetPosition);
 
     let distance = {
       x: this._private.targetPosition.x - this._private.startPosition.x,
@@ -86,14 +83,9 @@ export default class AnimatedScroll {
     // SET SPEED AND START ANIMATING
 
     this._private.maxPxPerFrame = scrollSpeed > 0 ? scrollSpeed : this._config.maxPxPerFrame;
-    // set the current scrolling speed to the maximum speed; speed will decrease as the moveable
-    // nears its target position
     this._private.pxPerFrame = this._private.maxPxPerFrame;
-    this._state.isActive = true;
 
     this._private.currentFrame = requestAnimationFrame(this._private.boundAnimatedScroll);
-
-    this.dispatchEvent(new Event(events.scrollStart));
   }
 
 
@@ -163,7 +155,7 @@ export default class AnimatedScroll {
 
 
   _getPositionDistance(pos1, pos2) {
-    return Math.sqrt( ((pos2.x - pos1.x) * (pos2.x - pos1.x)) + ((pos2.y - pos1.y) * (pos2.y - pos1.y)) );
+    return Math.sqrt(((pos2.x - pos1.x) * (pos2.x - pos1.x)) + ((pos2.y - pos1.y) * (pos2.y - pos1.y)));
   }
 
 

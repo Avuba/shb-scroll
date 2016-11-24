@@ -108,7 +108,8 @@ export default class ShbScroll {
 
     // both fire a "positionChange" event including an absolute position
     this.bounce = new Bounce(this._config);
-    this.animatedScroll = new AnimatedScroll(this._config);
+    this.animatedScroll = new Bounce(this._config);
+    // this.animatedScroll = new AnimatedScroll(this._config);
 
     this.events = events;
     utils.addEventTargetInterface(this);
@@ -129,10 +130,9 @@ export default class ShbScroll {
     let targetPosition = this._getScrollTarget(position);
 
     if (animateTime) {
-      this.animatedScroll.start({
-        x: this._private.moveable.x.position,
-        y: this._private.moveable.y.position
-      }, targetPosition, animateTime);
+      this._forXY((xy) => {
+        this.animatedScroll.startOnAxis(xy, this._private.moveable[xy].position, targetPosition[xy], animateTime);
+      });
     }
     else {
       requestAnimationFrame(() => this._updateMoveablePosition(targetPosition));
@@ -216,7 +216,7 @@ export default class ShbScroll {
       bounceStartOnAxis: this._onBounceStartOnAxis.bind(this),
       bouncePositionChange: this._onBouncePositionChange.bind(this),
       bounceEnd: this._checkForPositionStable.bind(this),
-      bounceEndOnAxis: this._onBounceEndOnAxis.bind(this),
+      bounceEndOnAxis: this._onBounceEndOnAxis.bind(this)
     };
 
     lodash.forEach(this._private.boundBounceHandlers, (handler, eventName) => {
@@ -224,9 +224,12 @@ export default class ShbScroll {
     });
 
     this._private.boundAnimatedScrollHandlers = {
-      scrollStart: this._onAnimatedScrollStart.bind(this),
-      scrollPositionChange: this._onAnimatedScrollPositionChange.bind(this),
-      scrollEnd: this._onAnimatedScrollEnd.bind(this)
+      bounceStart: this._onAnimatedScrollStart.bind(this),
+      bouncePositionChange: this._onAnimatedScrollPositionChange.bind(this),
+      bounceEnd: this._onAnimatedScrollEnd.bind(this)
+      // scrollStart: this._onAnimatedScrollStart.bind(this),
+      // scrollPositionChange: this._onAnimatedScrollPositionChange.bind(this),
+      // scrollEnd: this._onAnimatedScrollEnd.bind(this)
     };
 
     lodash.forEach(this._private.boundAnimatedScrollHandlers, (handler, eventName) => {
@@ -395,6 +398,7 @@ export default class ShbScroll {
 
 
   _onAnimatedScrollStart() {
+    console.log('_onAnimatedScrollStart');
     this._state.isAnimatedScrolling = true;
   }
 
@@ -405,6 +409,7 @@ export default class ShbScroll {
 
 
   _onAnimatedScrollEnd() {
+    console.log('_onAnimatedScrollEnd');
     this._state.isAnimatedScrolling = false;
     this._checkForPositionStable();
   }
@@ -503,7 +508,7 @@ export default class ShbScroll {
     let scrollTarget = { x: 0, y: 0 };
 
     this._forXY((xy) => {
-      if (!position[xy]) {
+      if (position[xy] === undefined) {
         scrollTarget[xy] = this._private.moveable[xy].position;
       }
       else if (position[xy] <  this._private.boundaries[xy].start) {

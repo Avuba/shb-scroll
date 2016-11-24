@@ -52,6 +52,8 @@ export default class Bounce {
 
 
   startOnAxis(axis, startPosition, targetPosition, animateTime) {
+    if (!this._private.axis.includes(axis)) return;
+
     cancelAnimationFrame(this._private.currentFrame);
 
     if (!this._state.isActive.x && !this._state.isActive.y) this.dispatchEvent(new Event(events.bounceStart));
@@ -66,6 +68,8 @@ export default class Bounce {
     this._private.animateTime[axis] = animateTime > 0 ? animateTime : this._config.bounceTime;
 
     this._private.currentFrame = requestAnimationFrame(this._private.boundBounce);
+
+    console.log('startOnAxis', axis, targetPosition);
   }
 
 
@@ -75,12 +79,18 @@ export default class Bounce {
 
 
   stopOnAxis(axis) {
+
     if (!this._state.isActive[axis]) return;
+
+    console.log('stopOnAxis', axis);
+    console.log(this._state.isActive);
 
     this._state.isActive[axis] = false;
     this.dispatchEvent(new Event(events.bounceEndOnAxis), { axis });
 
     if (!this._state.isActive.x && !this._state.isActive.y) {
+      console.log('events.bounceEnd', axis);
+
       this.dispatchEvent(new Event(events.bounceEnd));
       cancelAnimationFrame(this._private.currentFrame);
     }
@@ -97,10 +107,13 @@ export default class Bounce {
       if (this._state.isActive[xy]) {
         let timePassed = Date.now() - this._private.startTime[xy];
 
+        console.log(xy, Math.abs(this._private.targetPosition[xy] - this._private.currentPosition[xy]));
+
         // we test the passed time instead of the position as:
         // - exponential functions never really cross the target
         // - some ease functions will cross the axes (spring-like effect)
-        if (timePassed < this._private.animateTime[xy]) {
+        if (timePassed < this._private.animateTime[xy]
+            && Math.abs(this._private.targetPosition[xy] - this._private.currentPosition[xy]) > 0.5) {
           this._private.currentPosition[xy] = utils.easeOutCubic(
             timePassed,
             this._private.startPosition[xy],
@@ -109,6 +122,8 @@ export default class Bounce {
         }
         // snap to target and tell bounce to end
         else {
+          console.log('clllose it', xy);
+
           this._private.currentPosition[xy] = this._private.targetPosition[xy];
           shouldBounceEnd[xy] = true;
         }
