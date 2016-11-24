@@ -9,50 +9,32 @@ import { default as AnimatedScroll } from './AnimatedScroll.js';
 
 let defaults = {
   config: {
-    // main container for defining the boundaries of the scrollable area and setting the event
-    // listeners. is expected to be a simple DOM node
+    // main container, direct parent of the moveable
     container: null,
 
-    // the moveable DOM node with the actual scrollable content
+    // the scrollable DOM node
     moveable: null,
 
-    // decide what axis to allow scrolling on, gets translated into an array by
-    // the class constructor
+    // axis to allow scrolling on, gets translated into an array by the class constructor
     axis: 'y',
 
-    // lock movement in one direction. relevant if more touch/scroll libraries are at the same spot
-    // and only the locked element should move
-    lock: false,
-
-    // allow scrolling beyond the edge of moveable
+    // allow scrolling beyond the edge of the container
     overscroll: true,
 
-    // maximum amount of pixels for touch-led overscrolling
+    // allow listening to the debounced window.resize event and call refresh
+    refreshOnResize: true,
+
+    // maximum amount of pixels for touch based overscrolling
     maxTouchOverscroll: 150,
 
-    // maximum amount of pixels for momentum-led overscrolling
+    // maximum amount of pixels for momentum based overscrolling
     maxMomentumOverscroll: 100,
 
-    // how much time (in msec) it takes to bounce back
-    bounceTime: 500,
-
-    // how much time (in msec) it takes to animate-scroll
-    scrollTime: 500,
-
-    // maximum speed for scrolling, in px/frame
-    maxPxPerFrame: 50,
-
-    // minimum speed for scrolling, under which animated scrolling stops
-    minPxPerFrame: 0.2,
-
-    // minimum overscroll push, under which momentum is stopped
+    // stop momentum if speed falls below
     minMomentumPush: 1.75,
 
-    // minimum overscroll push multiplier, under which momentum is stopped
+    // stop momentum if multiplier falls below
     minMomentumMultiplier: 0.25,
-
-    // when set to true, listens to debounced window.resize events and calls refresh
-    refreshOnResize: true
 
     // NOTE: please take a look at the config objects inside ShbTouch.js, Bounce.js, Momentum.js and
     // AnimatedScroll.js regarding what other possible config parameters can be passed

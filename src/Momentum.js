@@ -4,18 +4,11 @@ import { default as lodash } from './utils/lodash';
 
 let defaults = {
   config: {
-    // maximum speed that can be reached via momentum
+    axis: 'xy',
     maxPxPerFrame: 35,
-
-    // stop momentum if it drops beneath this spead
     minPxPerFrame: 0.5,
-
     // speed to be subtracted from pxPerFrame per frame when momentum is active
-    subtractPxPerFrame: 0.2,
-
-    // decide what axis to allow scrolling on, gets translated into an array by
-    // the class constructor
-    axis: 'xy'
+    subtractPxPerFrame: 0.2
   },
 
   private: {
