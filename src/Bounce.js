@@ -108,6 +108,7 @@ export default class Bounce {
     // that this specific axis reaches the targetPosition
     this.dispatchEvent(new Event(events.bouncePositionChange), this._private.currentPosition);
 
+    // only after firing the event we check what bounces to stop
     this._forXY((xy) => {
       if (shouldBounceEnd[xy]) this._stopOnAxis(xy)
     });

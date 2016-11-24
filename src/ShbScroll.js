@@ -46,7 +46,7 @@ let defaults = {
     minPxPerFrame: 0.2,
 
     // minimum overscroll push, under which momentum is stopped
-    minMomentumPush: 1.5,
+    minMomentumPush: 1.75,
 
     // minimum overscroll push multiplier, under which momentum is stopped
     minMomentumMultiplier: 0.25,
@@ -388,19 +388,16 @@ export default class ShbScroll {
 
 
   _onMomentumStartOnAxis(event) {
-    console.log('_onMomentumStartOnAxis');
     this._state.isMomentumOnAxis[event.data.axis] = true;
   }
 
 
   _onMomentumStop() {
-    console.log('_onMomentumStop');
     this._checkForPositionStable();
   }
 
 
   _onMomentumStopOnAxis(event) {
-    console.log('_onMomentumStopOnAxis');
     this._state.isMomentumOnAxis[event.data.axis] = false;
     this._checkForBounceStartOnAxis(event.data.axis);
   }
