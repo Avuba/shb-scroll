@@ -57,8 +57,6 @@ export default class Animate {
   startOnAxis(axis, startPosition, targetPosition, animateTime, easeAlg) {
     if (!this._private.axis.includes(axis)) return;
 
-    cancelAnimationFrame(this._private.currentFrame);
-
     if (!this._state.isActive.x && !this._state.isActive.y) this.dispatchEvent(new Event(events.animateStart));
     this._state.isActive[axis] = true;
 
@@ -72,6 +70,7 @@ export default class Animate {
     this._private.animateTime[axis] = animateTime > 0 ? animateTime : this._config.animateTime;
     this._private.easeAlg[axis] = easeAlg && ease[easeAlg] ? ease[easeAlg] : ease[this._config.easeAlg];
 
+    cancelAnimationFrame(this._private.currentFrame);
     this._private.currentFrame = requestAnimationFrame(this._private.boundRunAnimate);
   }
 

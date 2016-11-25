@@ -50,8 +50,6 @@ export default class Momentum {
 
 
   start(momentum) {
-    cancelAnimationFrame(this._private.currentFrame);
-
     if (!this._state.isActive.x && !this._state.isActive.y) this.dispatchEvent(new Event(events.momentumStart));
     this._private.currentMomentum = momentum;
 
@@ -68,6 +66,7 @@ export default class Momentum {
       }
     });
 
+    cancelAnimationFrame(this._private.currentFrame);
     this._private.currentFrame = requestAnimationFrame(this._private.boundMomentum);
   }
 

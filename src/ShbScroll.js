@@ -296,8 +296,7 @@ export default class ShbScroll {
 
           // we stop momentum when it becomes too slow so the bounce animation can kick in
           if (this._state.isMomentumOnAxis[xy]
-            && (multiplier < this._config.minMomentumMultiplier
-              || Math.abs(pxToAdd) < this._config.minMomentumPush)) {
+              && (multiplier < this._config.minMomentumMultiplier || Math.abs(pxToAdd) < this._config.minMomentumPush)) {
             stopMomentum = true;
           }
         }
@@ -412,6 +411,8 @@ export default class ShbScroll {
 
 
   _updateMoveablePosition(newPosition) {
+    let positionHasChanged = false;
+
     this._forXY((xy) => {
       if (this._config.overscroll) {
         let boundaries = this._private.boundaries;
@@ -428,20 +429,20 @@ export default class ShbScroll {
           this._private.moveable[xy].overscroll = 0;
         }
       }
-    });
 
-    if (this._private.moveable.x.position !== newPosition.x
-        || this._private.moveable.y.position !== newPosition.y) {
-      this._forXY((xy) => {
+      if (this._private.moveable[xy].position !== newPosition[xy]) {
         this._private.moveable[xy].position = newPosition[xy];
+        positionHasChanged = true;
 
         if (this._private.boundaries[xy].end > 0) {
           this._private.moveable[xy].progress = this._private.moveable[xy].position / this._private.boundaries[xy].end;
         } else {
           this._private.moveable[xy].progress = 1;
         }
-      });
+      }
+    });
 
+    if (positionHasChanged) {
       this._updateMoveableNodePosition();
       this.dispatchEvent(new Event(events.positionChange), lodash.cloneDeep(this._private.moveable));
     }
