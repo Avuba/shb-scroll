@@ -6,7 +6,8 @@
   c = the change in value
   d = the duration time
 
-  see examples here: http://easings.net/
+  thanks to: http://gsgd.co.uk/sandbox/jquery/easing/jquery.easing.1.3.js
+  see examples here: http://easings.net
 */
 
 

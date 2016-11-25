@@ -35,7 +35,7 @@ let events = {
 };
 
 
-export default class Bounce {
+export default class Animate {
   constructor(config) {
     this._config = lodash.cloneDeep(defaults.config);
     this._private = lodash.cloneDeep(defaults.private);

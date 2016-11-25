@@ -3,8 +3,8 @@ import { default as ease } from './utils/ease';
 import { default as lodash } from './utils/lodash';
 // TODO: import via npm as soon as available
 import { default as ShbTouch } from './vendor/ShbTouch';
-import { default as Momentum } from './Momentum.js';
-import { default as Bounce } from './Bounce.js';
+import { default as Momentum } from './Momentum';
+import { default as Animate } from './Animate';
 
 
 let defaults = {
@@ -36,8 +36,8 @@ let defaults = {
     // stop momentum if multiplier falls below
     minMomentumMultiplier: 0.25,
 
-    // NOTE: please take a look at the config objects inside ShbTouch.js, Bounce.js, Momentum.js and
-    // AnimatedScroll.js regarding what other possible config parameters can be passed
+    // NOTE: please take a look at the config objects inside ShbTouch.js, Animate.js and Momentum.js
+    // regarding what other possible config parameters can be passed
   },
 
   private: {
@@ -105,7 +105,7 @@ export default class ShbScroll {
     this.shbTouch = new ShbTouch(this._config);
     this.momentum = new Momentum(this._config);
     // fires a "positionChange" event with an absolute position
-    this.animate = new Bounce(this._config);
+    this.animate = new Animate(this._config);
 
     this.events = events;
     utils.addEventTargetInterface(this);
@@ -206,14 +206,14 @@ export default class ShbScroll {
       this.momentum.addEventListener(eventName, handler);
     });
 
-    this._private.boundBounceHandlers = {
-      animateStartOnAxis: this._onBounceStartOnAxis.bind(this),
-      animatePositionChange: this._onBouncePositionChange.bind(this),
+    this._private.boundAnimateHandlers = {
+      animateStartOnAxis: this._onAnimateStartOnAxis.bind(this),
+      animatePositionChange: this._onAnimatePositionChange.bind(this),
       animateEnd: this._checkForPositionStable.bind(this),
-      animateEndOnAxis: this._onBounceEndOnAxis.bind(this)
+      animateEndOnAxis: this._onAnimateEndOnAxis.bind(this)
     };
 
-    lodash.forEach(this._private.boundBounceHandlers, (handler, eventName) => {
+    lodash.forEach(this._private.boundAnimateHandlers, (handler, eventName) => {
       this.animate.addEventListener(eventName, handler);
     });
 
@@ -229,7 +229,7 @@ export default class ShbScroll {
       this.shbTouch.removeEventListener(eventName, handler);
     });
 
-    lodash.forEach(this._private.boundBounceHandlers, (handler, eventName) => {
+    lodash.forEach(this._private.boundAnimateHandlers, (handler, eventName) => {
       this.animate.removeEventListener(eventName, handler);
     });
 
@@ -294,7 +294,7 @@ export default class ShbScroll {
 
           pxToAdd *= multiplier;
 
-          // we stop momentum when it becomes too slow so bounce can kick in
+          // we stop momentum when it becomes too slow so the bounce animation can kick in
           if (this._state.isMomentumOnAxis[xy]
             && (multiplier < this._config.minMomentumMultiplier
               || Math.abs(pxToAdd) < this._config.minMomentumPush)) {
@@ -351,14 +351,14 @@ export default class ShbScroll {
   }
 
 
-  _onBounceStartOnAxis(event) {
+  _onAnimateStartOnAxis(event) {
     this._state.isAnimatingOnAxis[event.data.axis] = true;
   }
 
 
-  _onBouncePositionChange(event) {
-    // we only care about the update position of the axis where bounce is actually active. this
-    // enables us to run Bounce and Momentum at the same time
+  _onAnimatePositionChange(event) {
+    // we only care about the update position of the axis where animate is actually active. this
+    // enables us to run Animate and Momentum at the same time
     let newPosition = {
       x: this._state.isAnimatingOnAxis.x ? event.data.x : this._private.moveable.x.position,
       y: this._state.isAnimatingOnAxis.y ? event.data.y : this._private.moveable.y.position
@@ -368,7 +368,7 @@ export default class ShbScroll {
   }
 
 
-  _onBounceEndOnAxis(event) {
+  _onAnimateEndOnAxis(event) {
     this._state.isAnimatingOnAxis[event.data.axis] = false;
   }
 
@@ -388,12 +388,12 @@ export default class ShbScroll {
         || this._state.isAnimatingOnAxis[axis]
         || this._state.isMomentumOnAxis[axis]) return;
 
+    // trigger bounce up animation
     if (this._private.moveable[axis].position < this._private.boundaries[axis].start) {
-      this.momentum.stopOnAxis(axis);
       this.animate.startOnAxis(axis, this._private.moveable[axis].position, this._private.boundaries[axis].start);
     }
+    // trigger bounce down animation
     else if (this._private.moveable[axis].position > this._private.boundaries[axis].end) {
-      this.momentum.stopOnAxis(axis);
       this.animate.startOnAxis(axis, this._private.moveable[axis].position, this._private.boundaries[axis].end);
     }
   }
