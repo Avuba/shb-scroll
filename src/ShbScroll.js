@@ -1,10 +1,10 @@
 import { default as utils } from './utils/utils';
+import { default as ease } from './utils/ease';
 import { default as lodash } from './utils/lodash';
 // TODO: import via npm as soon as available
 import { default as ShbTouch } from './vendor/ShbTouch';
 import { default as Momentum } from './Momentum.js';
 import { default as Bounce } from './Bounce.js';
-import { default as AnimatedScroll } from './AnimatedScroll.js';
 
 
 let defaults = {
@@ -74,8 +74,7 @@ let defaults = {
 
   state: {
     isTouchActive: false,
-    isAnimatedScrolling: false,
-    isBouncingOnAxis: {
+    isAnimatingOnAxis: {
       x: false,
       y: false
     },
@@ -105,11 +104,8 @@ export default class ShbScroll {
     // both fire a "push" event with a relative direction
     this.shbTouch = new ShbTouch(this._config);
     this.momentum = new Momentum(this._config);
-
-    // both fire a "positionChange" event including an absolute position
-    this.bounce = new Bounce(this._config);
-    this.animatedScroll = new Bounce(this._config);
-    // this.animatedScroll = new AnimatedScroll(this._config);
+    // fires a "positionChange" event with an absolute position
+    this.animate = new Bounce(this._config);
 
     this.events = events;
     utils.addEventTargetInterface(this);
@@ -124,14 +120,13 @@ export default class ShbScroll {
 
   scrollTo(position, animateTime) {
     this.momentum.stop();
-    this.bounce.stop();
-    this.animatedScroll.stop();
+    this.animate.stop();
 
     let targetPosition = this._getScrollTarget(position);
 
     if (animateTime) {
       this._forXY((xy) => {
-        this.animatedScroll.startOnAxis(xy, this._private.moveable[xy].position, targetPosition[xy], animateTime);
+        this.animate.startOnAxis(xy, this._private.moveable[xy].position, targetPosition[xy], animateTime, 'easeInOutCubic');
       });
     }
     else {
@@ -162,7 +157,7 @@ export default class ShbScroll {
 
   disableScrolling(isDisabled) {
     this.momentum.stop();
-    this.animatedScroll.stop();
+    this.animate.stop();
     this.shbTouch.disableScrolling(isDisabled);
   }
 
@@ -178,8 +173,7 @@ export default class ShbScroll {
     this.shbTouch.destroy();
 
     this.momentum.stop();
-    this.bounce.stop();
-    this.animatedScroll.stop();
+    this.animate.stop();
 
     this._config.container = null;
     this._config.moveable = null;
@@ -213,27 +207,14 @@ export default class ShbScroll {
     });
 
     this._private.boundBounceHandlers = {
-      bounceStartOnAxis: this._onBounceStartOnAxis.bind(this),
-      bouncePositionChange: this._onBouncePositionChange.bind(this),
-      bounceEnd: this._checkForPositionStable.bind(this),
-      bounceEndOnAxis: this._onBounceEndOnAxis.bind(this)
+      animateStartOnAxis: this._onBounceStartOnAxis.bind(this),
+      animatePositionChange: this._onBouncePositionChange.bind(this),
+      animateEnd: this._checkForPositionStable.bind(this),
+      animateEndOnAxis: this._onBounceEndOnAxis.bind(this)
     };
 
     lodash.forEach(this._private.boundBounceHandlers, (handler, eventName) => {
-      this.bounce.addEventListener(eventName, handler);
-    });
-
-    this._private.boundAnimatedScrollHandlers = {
-      bounceStart: this._onAnimatedScrollStart.bind(this),
-      bouncePositionChange: this._onAnimatedScrollPositionChange.bind(this),
-      bounceEnd: this._onAnimatedScrollEnd.bind(this)
-      // scrollStart: this._onAnimatedScrollStart.bind(this),
-      // scrollPositionChange: this._onAnimatedScrollPositionChange.bind(this),
-      // scrollEnd: this._onAnimatedScrollEnd.bind(this)
-    };
-
-    lodash.forEach(this._private.boundAnimatedScrollHandlers, (handler, eventName) => {
-      this.animatedScroll.addEventListener(eventName, handler);
+      this.animate.addEventListener(eventName, handler);
     });
 
     if (this._config.refreshOnResize) {
@@ -249,15 +230,11 @@ export default class ShbScroll {
     });
 
     lodash.forEach(this._private.boundBounceHandlers, (handler, eventName) => {
-      this.bounce.removeEventListener(eventName, handler);
+      this.animate.removeEventListener(eventName, handler);
     });
 
     lodash.forEach(this._private.boundMomentumHandlers, (handler, eventName) => {
       this.momentum.removeEventListener(eventName, handler);
-    });
-
-    lodash.forEach(this._private.boundAnimatedScrollHandlers, (handler, eventName) => {
-      this.animatedScroll.removeEventListener(eventName, handler);
     });
 
     if (this._private.boundDebouncedRefresh) {
@@ -291,8 +268,7 @@ export default class ShbScroll {
   _onTouchStart() {
     this._state.isTouchActive = true;
     this.momentum.stop();
-    this.bounce.stop();
-    this.animatedScroll.stop();
+    this.animate.stop();
   }
 
 
@@ -314,7 +290,7 @@ export default class ShbScroll {
         if (this._private.moveable[xy].overscroll > 0) {
           // for non-touch pushes (e.g. momentum pushes) we use a smaller maximum overscroll
           let maxOverscroll = this._state.isTouchActive ? this._config.maxTouchOverscroll : this._config.maxMomentumOverscroll,
-            multiplier = utils.easeLinear(this._private.moveable[xy].overscroll, 1, -1, maxOverscroll);
+            multiplier = ease.easeLinear(this._private.moveable[xy].overscroll, 1, -1, maxOverscroll);
 
           pxToAdd *= multiplier;
 
@@ -376,7 +352,7 @@ export default class ShbScroll {
 
 
   _onBounceStartOnAxis(event) {
-    this._state.isBouncingOnAxis[event.data.axis] = true;
+    this._state.isAnimatingOnAxis[event.data.axis] = true;
   }
 
 
@@ -384,8 +360,8 @@ export default class ShbScroll {
     // we only care about the update position of the axis where bounce is actually active. this
     // enables us to run Bounce and Momentum at the same time
     let newPosition = {
-      x: this._state.isBouncingOnAxis.x ? event.data.x : this._private.moveable.x.position,
-      y: this._state.isBouncingOnAxis.y ? event.data.y : this._private.moveable.y.position
+      x: this._state.isAnimatingOnAxis.x ? event.data.x : this._private.moveable.x.position,
+      y: this._state.isAnimatingOnAxis.y ? event.data.y : this._private.moveable.y.position
     };
 
     this._updateMoveablePosition(newPosition);
@@ -393,25 +369,7 @@ export default class ShbScroll {
 
 
   _onBounceEndOnAxis(event) {
-    this._state.isBouncingOnAxis[event.data.axis] = false;
-  }
-
-
-  _onAnimatedScrollStart() {
-    console.log('_onAnimatedScrollStart');
-    this._state.isAnimatedScrolling = true;
-  }
-
-
-  _onAnimatedScrollPositionChange(event) {
-    this._updateMoveablePosition(event.data);
-  }
-
-
-  _onAnimatedScrollEnd() {
-    console.log('_onAnimatedScrollEnd');
-    this._state.isAnimatedScrolling = false;
-    this._checkForPositionStable();
+    this._state.isAnimatingOnAxis[event.data.axis] = false;
   }
 
 
@@ -427,24 +385,23 @@ export default class ShbScroll {
 
   _checkForBounceStartOnAxis(axis) {
     if (this._state.isTouchActive
-        || this._state.isBouncingOnAxis[axis]
+        || this._state.isAnimatingOnAxis[axis]
         || this._state.isMomentumOnAxis[axis]) return;
 
     if (this._private.moveable[axis].position < this._private.boundaries[axis].start) {
       this.momentum.stopOnAxis(axis);
-      this.bounce.startOnAxis(axis, this._private.moveable[axis].position, this._private.boundaries[axis].start);
+      this.animate.startOnAxis(axis, this._private.moveable[axis].position, this._private.boundaries[axis].start);
     }
     else if (this._private.moveable[axis].position > this._private.boundaries[axis].end) {
       this.momentum.stopOnAxis(axis);
-      this.bounce.startOnAxis(axis, this._private.moveable[axis].position, this._private.boundaries[axis].end);
+      this.animate.startOnAxis(axis, this._private.moveable[axis].position, this._private.boundaries[axis].end);
     }
   }
 
 
   _checkForPositionStable() {
     if (this._state.isTouchActive
-        || this._state.isAnimatedScrolling
-        || this._state.isBouncingOnAxis.x || this._state.isBouncingOnAxis.y
+        || this._state.isAnimatingOnAxis.x || this._state.isAnimatingOnAxis.y
         || this._state.isMomentumOnAxis.x || this._state.isMomentumOnAxis.y) return;
 
     this.dispatchEvent(new Event(events.positionStable), lodash.cloneDeep(this._private.moveable));
