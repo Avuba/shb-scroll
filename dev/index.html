@@ -8,59 +8,39 @@
   <title>Standalone scroller</title>
 
   <style>
-    .container-title {
-      position: absolute;
-      font-family: sans-serif;
-      font-size: small;
-    }
-
     .container {
       position: absolute;
-      width: 250px;
-      height: 250px;
+      left: 0px;
+      top: 0px;
+      width: 75%;
+      height: 75%;
       background: #eee;
       overflow: hidden;
     }
 
     .moveable {
       position: absolute;
-      width: 250px;
-      height: 250px;
+      width: 1500px;
+      height: 3000px;
       background: url('pattern.jpg');
-      transform: translate3d(0px, 0px, 0px);
-      will-change: transform;
     }
   </style>
 </head>
 
 <body>
-  <style>
-    #container-1 {
-      height: 450px;
-    }
-
-    #moveable-1 {
-      height: 2500px;
-    }
-  </style>
-
-  <div class="container" id="container-1">
-    <div class="moveable" id="moveable-1"></div>
+  <div class="container">
+    <div class="moveable"></div>
   </div>
 
   <script src="ShbScroll.js" charset="utf-8"></script>
 
   <script type="text/javascript">
-    var container1 = document.getElementById('container-1'),
-      moveable1 = document.getElementById('moveable-1');
-
-    var config = {
-      container: container1,
-      moveable: moveable1,
+    var shbScroll1 = new ShbScroll({
+      container: document.getElementsByClassName('container')[0],
+      moveable: document.getElementsByClassName('moveable')[0],
+      axis: 'y',
       preventDefault: true
-    };
-
-    var scroll = new ShbScroll(config);
+    });
   </script>
 </body>
 </html>

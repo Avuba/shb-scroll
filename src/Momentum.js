@@ -5,7 +5,7 @@ import { default as lodash } from './utils/lodash';
 let defaults = {
   config: {
     axis: 'xy',
-    maxPxPerFrame: 35,
+    maxPxPerFrame: 50,
     minPxPerFrame: 0.5,
     // speed to be subtracted from pxPerFrame per frame when momentum is active
     subtractPxPerFrame: 0.2

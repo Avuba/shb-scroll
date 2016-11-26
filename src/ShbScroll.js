@@ -52,12 +52,14 @@ let defaults = {
       x: {
         position: 0, // in pixels
         progress: 0, // in percent
-        overscroll: 0 // in pixels
+        overscroll: 0, // in pixels
+        overscrollDirection: 0
       },
       y: {
         position: 0,
         progress: 0,
-        overscroll: 0
+        overscroll: 0,
+        overscrollDirection: 0
       }
     },
     boundaries: {
@@ -111,7 +113,10 @@ export default class ShbScroll {
     utils.addEventTargetInterface(this);
     this._bindEvents();
 
-    requestAnimationFrame(() => this._calculateParams());
+    requestAnimationFrame(() => {
+      this._setupDomElements();
+      this._calculateParams();
+    });
   }
 
 
@@ -266,6 +271,8 @@ export default class ShbScroll {
 
 
   _onTouchStart() {
+    console.log('_onTouchStart');
+
     this._state.isTouchActive = true;
     this.momentum.stop();
     this.animate.stop();
@@ -273,6 +280,8 @@ export default class ShbScroll {
 
 
   _onPush(event) {
+    console.log('_onPush', event.data);
+
     let pushBy = event.data,
       newPosition = {
         x: this._private.moveable.x.position,
@@ -284,10 +293,15 @@ export default class ShbScroll {
       let pxToAdd = pushBy[xy].px * pushBy[xy].direction * -1,
         stopMomentum = false;
 
-      // if overscrolling is allowed, reduce the push by a linear factor of the distance. the
-      // further the overscroll, the smaller the push
+      // overscrolling is allowed
       if (this._config.overscroll) {
-        if (this._private.moveable[xy].overscroll > 0) {
+
+        // - reduce the push by a linear factor of the distance. the further the overscroll, the
+        // smaller the push
+        // - additionally, the multiplier only gets applied when increasing the overscroll distance
+        if (this._private.moveable[xy].overscroll > 0
+            && pushBy[xy].direction === this._private.moveable[xy].overscrollDirection) {
+
           // for non-touch pushes (e.g. momentum pushes) we use a smaller maximum overscroll
           let maxOverscroll = this._state.isTouchActive ? this._config.maxTouchOverscroll : this._config.maxMomentumOverscroll,
             multiplier = ease.easeLinear(this._private.moveable[xy].overscroll, 1, -1, maxOverscroll);
@@ -327,6 +341,8 @@ export default class ShbScroll {
 
 
   _onTouchEnd() {
+    console.log('_onTouchEnd');
+
     this._state.isTouchActive = false;
     this._checkForBounceStart();
     this._checkForPositionStable();
@@ -334,7 +350,12 @@ export default class ShbScroll {
 
 
   _onTouchEndWithMomentum(event) {
+    console.log('_onTouchEndWithMomentum');
+
     if (this._private.moveable.x.overscroll > 0 || this._private.moveable.y.overscroll > 0) return;
+
+    console.log('momentum start:', event.data);
+
     this.momentum.start(event.data);
   }
 
@@ -415,18 +436,19 @@ export default class ShbScroll {
 
     this._forXY((xy) => {
       if (this._config.overscroll) {
-        let boundaries = this._private.boundaries;
-
         // overscrolling on axis start (left or top)
-        if (newPosition[xy] < boundaries[xy].start) {
-          this._private.moveable[xy].overscroll = boundaries[xy].start - newPosition[xy];
+        if (newPosition[xy] < this._private.boundaries[xy].start) {
+          this._private.moveable[xy].overscroll = this._private.boundaries[xy].start - newPosition[xy];
+          this._private.moveable[xy].overscrollDirection = 1;
         }
         // overscrolling on axis start (right or bottom)
-        else if (newPosition[xy] > boundaries[xy].end) {
-          this._private.moveable[xy].overscroll = newPosition[xy] - boundaries[xy].end;
+        else if (newPosition[xy] > this._private.boundaries[xy].end) {
+          this._private.moveable[xy].overscroll = newPosition[xy] - this._private.boundaries[xy].end;
+          this._private.moveable[xy].overscrollDirection = -1;
         }
         else {
           this._private.moveable[xy].overscroll = 0;
+          this._private.moveable[xy].overscrollDirection = 0;
         }
       }
 
@@ -452,6 +474,19 @@ export default class ShbScroll {
   _updateMoveableNodePosition() {
     this._config.moveable.style.webkitTransform = `translate3d(${-this._private.moveable.x.position}px, ${-this._private.moveable.y.position}px, 0px)`;
   }
+
+
+  _setupDomElements() {
+  // attributes requried by the container
+  this._config.container.style.overflow = 'hidden';
+
+  // attributes requried by the moveable
+  this._config.moveable.style.position = 'absolute';
+  this._config.moveable.style.left = '0px';
+  this._config.moveable.style.top = '0px';
+  this._config.moveable.style.webkitTransform = 'translate3d(0px, 0px, 0px)';
+  this._config.moveable.style.willChange = 'transform';
+}
 
 
   // HELPERS
