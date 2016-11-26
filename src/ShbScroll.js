@@ -43,8 +43,8 @@ let defaults = {
   private: {
     axis: ['x', 'y'],
     container: {
+      width: 0,
       height: 0,
-      width: 0
     },
     moveable: {
       width: 0,

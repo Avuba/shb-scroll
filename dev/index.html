@@ -8,38 +8,69 @@
   <title>Standalone scroller</title>
 
   <style>
-    .container {
+    .container-1 {
       position: absolute;
       left: 0px;
       top: 0px;
       width: 75%;
       height: 75%;
       background: #eee;
-      overflow: hidden;
     }
 
-    .moveable {
+    .moveable-1 {
       position: absolute;
       width: 1500px;
       height: 3000px;
+      background: url('pattern.jpg');
+    }
+
+    .container-2 {
+      position: absolute;
+      left: 200px;
+      top: 200px;
+      width: 200px;
+      height: 200px;
+      background: #ddff00;
+    }
+
+    .moveable-2 {
+      position: absolute;
+      width: 1500px;
+      height: 1500px;
       background: url('pattern.jpg');
     }
   </style>
 </head>
 
 <body>
-  <div class="container">
-    <div class="moveable"></div>
+  <div class="container-1">
+    <div class="moveable-1">
+
+      <div class="container-2">
+        <div class="moveable-2"></div>
+      </div>
+
+    </div>
   </div>
 
   <script src="ShbScroll.js" charset="utf-8"></script>
 
   <script type="text/javascript">
     var shbScroll1 = new ShbScroll({
-      container: document.getElementsByClassName('container')[0],
-      moveable: document.getElementsByClassName('moveable')[0],
+      container: document.getElementsByClassName('container-1')[0],
+      moveable: document.getElementsByClassName('moveable-1')[0],
       axis: 'xy',
       preventDefault: true
+    });
+
+    var shbScroll2 = new ShbScroll({
+      container: document.getElementsByClassName('container-2')[0],
+      moveable: document.getElementsByClassName('moveable-2')[0],
+      axis: 'y',
+      preventDefault: true,
+      // capture: true,
+      // stopEvents: true,
+      stopEventsOnDirectionLock: true
     });
   </script>
 </body>
