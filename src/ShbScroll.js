@@ -12,7 +12,8 @@ let defaults = {
     // main container, direct parent of the moveable
     container: null,
 
-    // the scrollable DOM node
+    // the scrollable DOM node. can also be a plain object with the parameters { width, height,
+    // left, top }. for the later case, ShbScroll will only send out events without DOM manipulation
     moveable: null,
 
     // axis to allow scrolling on, gets translated into an array by the class constructor
@@ -76,6 +77,7 @@ let defaults = {
 
   state: {
     isTouchActive: false,
+    isAbstractMoveable: false,
     isAnimatingOnAxis: {
       x: false,
       y: false
@@ -248,15 +250,30 @@ export default class ShbScroll {
   }
 
 
-  _calculateParams() {
-    this._private.container.width = this._config.container.clientWidth;
-    this._private.container.height = this._config.container.clientHeight;
+  _setupDomElements() {
+    // attributes requried by the container
+    this._config.container.style.overflow = 'hidden';
 
-    this._private.moveable.width = this._config.moveable.clientWidth;
-    this._private.moveable.height = this._config.moveable.clientHeight;
+    if (this._config.moveable instanceof HTMLElement) {
+      // attributes requried by the moveable
+      this._config.moveable.style.position = 'absolute';
+      this._config.moveable.style.left = '0px';
+      this._config.moveable.style.top = '0px';
+      this._config.moveable.style.webkitTransform = 'translate3d(0px, 0px, 0px)';
+      this._config.moveable.style.willChange = 'transform';
+    }
+  }
+
+
+  _calculateParams() {
+    if (!(this._config.moveable instanceof HTMLElement)) this._state.isAbstractMoveable = true;
 
     this._forXY((xy) => {
-      let dimension = xy === 'x' ? 'width' : 'height';
+      let dimension = xy === 'x' ? 'width' : 'height',
+        clientDimension = xy === 'x' ? 'clientWidth' : 'clientHeight';
+
+      this._private.container[dimension] = this._config.container[clientDimension];
+      this._private.moveable[dimension] = this._config.moveable[this._state.isAbstractMoveable ? dimension : clientDimension];
 
       this._private.boundaries[xy].start = 0;
       this._private.boundaries[xy].end = this._private.moveable[dimension] - this._private.container[dimension];
@@ -264,6 +281,13 @@ export default class ShbScroll {
       // in case the moveable is smaller than the container, the only "stable" end position is 0
       if (this._private.boundaries[xy].end < 0) this._private.boundaries[xy].end = 0;
     });
+
+    // abstract moveables may have left/top position values that are not 0 (in opposition to DOM
+    // moveables, which get set to left/top = 0 when calling '_setupDomElements()'). calling
+    // '_updateMoveablePosition()' once adjusts all internally stored values
+    if (this._state.isAbstractMoveable) {
+      this._updateMoveablePosition({ x: this._config.moveable.left, y: this._config.moveable.top });
+    }
   }
 
 
@@ -452,7 +476,7 @@ export default class ShbScroll {
     });
 
     if (positionHasChanged) {
-      this._updateMoveableNodePosition();
+      if (!this._state.isAbstractMoveable) this._updateMoveableNodePosition();
       this.dispatchEvent(new Event(events.positionChange), lodash.cloneDeep(this._private.moveable));
     }
   }
@@ -461,19 +485,6 @@ export default class ShbScroll {
   _updateMoveableNodePosition() {
     this._config.moveable.style.webkitTransform = `translate3d(${-this._private.moveable.x.position}px, ${-this._private.moveable.y.position}px, 0px)`;
   }
-
-
-  _setupDomElements() {
-  // attributes requried by the container
-  this._config.container.style.overflow = 'hidden';
-
-  // attributes requried by the moveable
-  this._config.moveable.style.position = 'absolute';
-  this._config.moveable.style.left = '0px';
-  this._config.moveable.style.top = '0px';
-  this._config.moveable.style.webkitTransform = 'translate3d(0px, 0px, 0px)';
-  this._config.moveable.style.willChange = 'transform';
-}
 
 
   // HELPERS

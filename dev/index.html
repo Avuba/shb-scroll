@@ -58,9 +58,25 @@
   <script type="text/javascript">
     var shbScroll1 = new ShbScroll({
       container: document.getElementsByClassName('container-1')[0],
+
       moveable: document.getElementsByClassName('moveable-1')[0],
-      axis: 'xy',
+      // moveable: {
+      //   width: 1500,
+      //   height: 1500,
+      //   left: 0,
+      //   top: 0
+      // },
+
+      axis: 'x',
       preventDefault: true
+    });
+
+    shbScroll1.addEventListener(shbScroll1.events.positionChange, function(event) {
+      // console.log('positionChange', event.data);
+    });
+
+    shbScroll1.addEventListener(shbScroll1.events.positionStable, function(event) {
+      // console.log('positionStable', event.data);
     });
 
     var shbScroll2 = new ShbScroll({
