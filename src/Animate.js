@@ -65,8 +65,8 @@ export default class Animate {
     this._private.startPosition[axis] = startPosition;
     this._private.currentPosition[axis] = startPosition;
     this._private.targetPosition[axis] = targetPosition;
-    this._private.startTime[axis] = Date.now();
 
+    this._private.startTime[axis] = Date.now();
     this._private.animateTime[axis] = animateTime > 0 ? animateTime : this._config.animateTime;
     this._private.easeAlg[axis] = easeAlg && ease[easeAlg] ? ease[easeAlg] : ease[this._config.easeAlg];
 
@@ -112,7 +112,7 @@ export default class Animate {
             this._private.targetPosition[xy] - this._private.startPosition[xy],
             this._private.animateTime[xy]);
         }
-        // snap to target and tell bounce to end otherise
+        // snap to target and tell bounce to end otherwise
         else {
           this._private.currentPosition[xy] = this._private.targetPosition[xy];
           shouldAnimateEnd[xy] = true;
