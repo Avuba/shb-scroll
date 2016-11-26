@@ -12,7 +12,17 @@ let defaults = {
   },
 
   private: {
-    axis: ['x', 'y']
+    axis: ['x', 'y'],
+    currentMomentum: {
+      x: {
+        direction: 0,
+        pxPerFrame: 0
+      },
+      y: {
+        direction: 0,
+        pxPerFrame: 0
+      }
+    }
   },
 
   state: {
@@ -49,22 +59,25 @@ export default class Momentum {
   // PUBLIC
 
 
-  start(momentum) {
-    if (!this._state.isActive.x && !this._state.isActive.y) this.dispatchEvent(new Event(events.momentumStart));
-    this._private.currentMomentum = momentum;
+  startOnAxis(axis, momentum) {
+    if (!this._private.axis.includes(axis)
+        || momentum.direction === 0
+        || momentum.pxPerFrame <= 0) return;
 
-    this._forXY((xy) => {
-      if (momentum[xy].pxPerFrame > 0) {
-        if (momentum[xy].pxPerFrame > this._config.maxPxPerFrame) {
-          momentum[xy].pxPerFrame = this._config.maxPxPerFrame;
-        }
+    if (momentum.pxPerFrame > this._config.maxPxPerFrame) {
+      momentum.pxPerFrame = this._config.maxPxPerFrame;
+    }
 
-        if (!this._state.isActive[xy]) {
-          this._state.isActive[xy] = true;
-          this.dispatchEvent(new Event(events.momentumStartOnAxis), { axis: xy });
-        }
-      }
-    });
+    if (!this._state.isActive.x && !this._state.isActive.y) {
+      this.dispatchEvent(new Event(events.momentumStart));
+    }
+
+    if (!this._state.isActive[axis]) {
+      this._state.isActive[axis] = true;
+      this.dispatchEvent(new Event(events.momentumStartOnAxis), { axis });
+    }
+
+    this._private.currentMomentum[axis] = momentum;
 
     cancelAnimationFrame(this._private.currentFrame);
     this._private.currentFrame = requestAnimationFrame(this._private.boundMomentum);

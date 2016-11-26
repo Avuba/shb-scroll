@@ -127,15 +127,15 @@ export default class ShbScroll {
     this.momentum.stop();
     this.animate.stop();
 
-    let targetPosition = this._getScrollTarget(position);
+    let scrollTarget = this._getScrollTarget(position);
 
     if (animateTime) {
       this._forXY((xy) => {
-        this.animate.startOnAxis(xy, this._private.moveable[xy].position, targetPosition[xy], animateTime, 'easeInOutCubic');
+        this.animate.startOnAxis(xy, this._private.moveable[xy].position, scrollTarget[xy], animateTime, 'easeInOutCubic');
       });
     }
     else {
-      requestAnimationFrame(() => this._updateMoveablePosition(targetPosition));
+      requestAnimationFrame(() => this._updateMoveablePosition(scrollTarget));
     }
   }
 
@@ -271,8 +271,6 @@ export default class ShbScroll {
 
 
   _onTouchStart() {
-    console.log('_onTouchStart');
-
     this._state.isTouchActive = true;
     this.momentum.stop();
     this.animate.stop();
@@ -280,8 +278,6 @@ export default class ShbScroll {
 
 
   _onPush(event) {
-    console.log('_onPush', event.data);
-
     let pushBy = event.data,
       newPosition = {
         x: this._private.moveable.x.position,
@@ -341,8 +337,6 @@ export default class ShbScroll {
 
 
   _onTouchEnd() {
-    console.log('_onTouchEnd');
-
     this._state.isTouchActive = false;
     this._checkForBounceStart();
     this._checkForPositionStable();
@@ -350,13 +344,11 @@ export default class ShbScroll {
 
 
   _onTouchEndWithMomentum(event) {
-    console.log('_onTouchEndWithMomentum');
-
-    if (this._private.moveable.x.overscroll > 0 || this._private.moveable.y.overscroll > 0) return;
-
-    console.log('momentum start:', event.data);
-
-    this.momentum.start(event.data);
+    this._forXY((xy) => {
+      if (this._private.moveable[xy].overscrollDirection === 0) {
+        this.momentum.startOnAxis(xy, event.data[xy]);
+      }
+    });
   }
 
 
@@ -377,7 +369,7 @@ export default class ShbScroll {
 
 
   _onAnimatePositionChange(event) {
-    // we only care about the update position of the axis where animate is actually active. this
+    // we only care about the position update of the axis where animate is actually active. this
     // enables us to run Animate and Momentum at the same time
     let newPosition = {
       x: this._state.isAnimatingOnAxis.x ? event.data.x : this._private.moveable.x.position,
@@ -406,16 +398,11 @@ export default class ShbScroll {
   _checkForBounceStartOnAxis(axis) {
     if (this._state.isTouchActive
         || this._state.isAnimatingOnAxis[axis]
-        || this._state.isMomentumOnAxis[axis]) return;
+        || this._state.isMomentumOnAxis[axis]
+        || this._private.moveable[axis].overscrollDirection === 0) return;
 
-    // trigger bounce up animation
-    if (this._private.moveable[axis].position < this._private.boundaries[axis].start) {
-      this.animate.startOnAxis(axis, this._private.moveable[axis].position, this._private.boundaries[axis].start);
-    }
-    // trigger bounce down animation
-    else if (this._private.moveable[axis].position > this._private.boundaries[axis].end) {
-      this.animate.startOnAxis(axis, this._private.moveable[axis].position, this._private.boundaries[axis].end);
-    }
+    let scrollTarget = this._private.moveable[axis].overscrollDirection > 0 ? this._private.boundaries[axis].start : this._private.boundaries[axis].end;
+    this.animate.startOnAxis(axis, this._private.moveable[axis].position, scrollTarget);
   }
 
 
