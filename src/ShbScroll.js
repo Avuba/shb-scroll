@@ -169,8 +169,7 @@ export default class ShbScroll {
   }
 
 
-  refresh(config) {
-    if (config) lodash.merge(this._config, config);
+  refresh() {
     requestAnimationFrame(() => this._calculateParams());
   }
 
