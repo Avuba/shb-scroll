@@ -88,13 +88,16 @@ let defaults = {
 
   state: {
     isTouchActive: false,
-    isPullToRefreshActive: false,
     isAbstractMoveable: false,
     isAnimatingOnAxis: {
       x: false,
       y: false
     },
     isMomentumOnAxis: {
+      x: false,
+      y: false
+    },
+    isPullToRefreshOnAxis: {
       x: false,
       y: false
     }
@@ -176,7 +179,10 @@ export default class ShbScroll {
 
 
   stopPullToRefresh() {
-    this._state.isPullToRefreshActive = false;
+    // TODO: enable deactivating pull to refresh on a single axis
+    this._state.isPullToRefreshOnAxis.x = false;
+    this._state.isPullToRefreshOnAxis.y = false;
+
     this._checkForBounceStart();
   }
 
@@ -379,7 +385,11 @@ export default class ShbScroll {
 
   _onTouchEnd() {
     this._state.isTouchActive = false;
-    if (this._state.isPullToRefreshActive) this.dispatchEvent(new Event(events.startPullToRefresh));
+
+    // TODO: send the event with axis specific information
+    if (this._state.isPullToRefreshOnAxis.x || this._state.isPullToRefreshOnAxis.y) {
+      this.dispatchEvent(new Event(events.startPullToRefresh));
+    }
 
     this._checkForBounceStart();
     this._checkForPositionStable();
@@ -444,8 +454,12 @@ export default class ShbScroll {
         || this._state.isMomentumOnAxis[axis]
         || this._private.moveable[axis].overscrollDirection === 0) return;
 
-    let scrollTarget = this._private.moveable[axis].overscrollDirection > 0 ? this._private.boundaries[axis].start : this._private.boundaries[axis].end;
-    if (this._state.isPullToRefreshActive) scrollTarget -= this._config.pullToRefreshMargin * this._private.moveable[axis].overscrollDirection;
+    let direction = this._private.moveable[axis].overscrollDirection,
+      scrollTarget = direction > 0 ? this._private.boundaries[axis].start : this._private.boundaries[axis].end;
+
+    if (this._state.isPullToRefreshOnAxis[axis]) {
+      scrollTarget -= this._config.pullToRefreshMargin * this._private.moveable[axis].overscrollDirection;
+    }
 
     this.animate.startOnAxis(axis, this._private.moveable[axis].position, scrollTarget);
   }
@@ -493,11 +507,11 @@ export default class ShbScroll {
         // multiplication by 1.1 is required as the "1" might never be reached otherwise
         this._private.moveable[xy].overscrollPull = Math.min(Math.max(this._private.moveable[xy].overscroll * 1.1 / this._config.pullToRefreshOverscroll, 0), 1);
 
-        // once isPullToRefreshActive is true, it can only be unset by stopPullToRefresh()
+        // once isPullToRefreshOnAxis is true, it can only be unset by stopPullToRefresh()
         if (this._config.pullToRefresh
             && this._state.isTouchActive
             && this._private.moveable[xy].overscrollPull >= 1) {
-          this._state.isPullToRefreshActive = true;
+          this._state.isPullToRefreshOnAxis[xy] = true;
         }
       }
 
