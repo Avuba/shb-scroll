@@ -195,7 +195,12 @@ export default class ShbScroll {
 
 
   refresh() {
-    requestAnimationFrame(() => this._calculateParams());
+    requestAnimationFrame(() => {
+      this._calculateParams();
+      // required so params like this._private.moveable[xy].overscroll get set correctly in case the
+      // dimensions of the container or the moveable have changed
+      this._updateMoveablePosition({ x: this._private.moveable.x.position, y: this._private.moveable.y.position });
+    });
   }
 
 
