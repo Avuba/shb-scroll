@@ -34,9 +34,8 @@ _export.addEventTargetInterface = function(target) {
   target.listeners = {};
 
   target.addEventListener = (type, callback) => {
-    if (!(type in target.listeners)) {
-      target.listeners[type] = [];
-    }
+    if (!(type in target.listeners)) target.listeners[type] = [];
+    
     target.listeners[type].push(callback);
   };
 
