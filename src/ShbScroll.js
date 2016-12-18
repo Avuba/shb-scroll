@@ -37,6 +37,15 @@ let defaults = {
     // stop momentum if multiplier falls below
     minMomentumMultiplier: 0.25,
 
+    // testing
+    pullToRefresh: false,
+
+    // testing
+    pullToRefreshOverscroll: 100,
+
+    // testing
+    pullToRefreshMargin: 50,
+
     // NOTE: please take a look at the config objects inside ShbTouch.js, Animate.js and Momentum.js
     // regarding what other possible config parameters can be passed
   },
@@ -54,13 +63,15 @@ let defaults = {
         position: 0, // in pixels
         progress: 0, // in percent
         overscroll: 0, // in pixels
-        overscrollDirection: 0
+        overscrollDirection: 0, // 1 or -1
+        overscrollPull: 0 // in percent
       },
       y: {
         position: 0,
         progress: 0,
         overscroll: 0,
-        overscrollDirection: 0
+        overscrollDirection: 0,
+        overscrollPull: 0
       }
     },
     boundaries: {
@@ -77,6 +88,7 @@ let defaults = {
 
   state: {
     isTouchActive: false,
+    isPullToRefreshActive: false,
     isAbstractMoveable: false,
     isAnimatingOnAxis: {
       x: false,
@@ -92,7 +104,8 @@ let defaults = {
 
 let events = {
   positionChange: 'positionChange',
-  positionStable: 'positionStable'
+  positionStable: 'positionStable',
+  startPullToRefresh: 'startPullToRefresh'
 };
 
 
@@ -159,6 +172,12 @@ export default class ShbScroll {
 
   scrollBottom(animateTime) {
     this.scrollTo(this._private.moveable.x.position, this._private.boundaries.y.end, animateTime);
+  }
+
+
+  stopPullToRefresh() {
+    this._state.isPullToRefreshActive = false;
+    this._checkForBounceStart();
   }
 
 
@@ -293,7 +312,7 @@ export default class ShbScroll {
   // EVENT HANDLERS
 
 
-  _onTouchStart() {
+  _onTouchStart(event) {
     this._state.isTouchActive = true;
     this.momentum.stop();
     this.animate.stop();
@@ -314,7 +333,6 @@ export default class ShbScroll {
 
       // overscrolling is allowed
       if (this._config.overscroll) {
-
         // - reduce the push by a linear factor of the distance. the further the overscroll, the
         // smaller the push
         // - additionally, the multiplier only gets applied when increasing the overscroll distance
@@ -361,6 +379,8 @@ export default class ShbScroll {
 
   _onTouchEnd() {
     this._state.isTouchActive = false;
+    if (this._state.isPullToRefreshActive) this.dispatchEvent(new Event(events.startPullToRefresh));
+
     this._checkForBounceStart();
     this._checkForPositionStable();
   }
@@ -425,6 +445,8 @@ export default class ShbScroll {
         || this._private.moveable[axis].overscrollDirection === 0) return;
 
     let scrollTarget = this._private.moveable[axis].overscrollDirection > 0 ? this._private.boundaries[axis].start : this._private.boundaries[axis].end;
+    if (this._state.isPullToRefreshActive) scrollTarget -= this._config.pullToRefreshMargin * this._private.moveable[axis].overscrollDirection;
+
     this.animate.startOnAxis(axis, this._private.moveable[axis].position, scrollTarget);
   }
 
@@ -434,7 +456,13 @@ export default class ShbScroll {
         || this._state.isAnimatingOnAxis.x || this._state.isAnimatingOnAxis.y
         || this._state.isMomentumOnAxis.x || this._state.isMomentumOnAxis.y) return;
 
-    this.dispatchEvent(new Event(events.positionStable), lodash.cloneDeep(this._private.moveable));
+    let eventData = {
+      isTouchActive: this._state.isTouchActive,
+      x: Object.assign({}, this._private.moveable.x),
+      y: Object.assign({}, this._private.moveable.y)
+    };
+
+    this.dispatchEvent(new Event(events.positionStable), eventData);
   }
 
 
@@ -456,9 +484,20 @@ export default class ShbScroll {
           this._private.moveable[xy].overscroll = newPosition[xy] - this._private.boundaries[xy].end;
           this._private.moveable[xy].overscrollDirection = -1;
         }
+        // no overscrolling
         else {
           this._private.moveable[xy].overscroll = 0;
           this._private.moveable[xy].overscrollDirection = 0;
+        }
+
+        // multiplication by 1.1 is required as the "1" might never be reached otherwise
+        this._private.moveable[xy].overscrollPull = Math.min(Math.max(this._private.moveable[xy].overscroll * 1.1 / this._config.pullToRefreshOverscroll, 0), 1);
+
+        // once isPullToRefreshActive is true, it can only be unset by stopPullToRefresh()
+        if (this._config.pullToRefresh
+            && this._state.isTouchActive
+            && this._private.moveable[xy].overscrollPull >= 1) {
+          this._state.isPullToRefreshActive = true;
         }
       }
 
@@ -468,7 +507,8 @@ export default class ShbScroll {
 
         if (this._private.boundaries[xy].end > 0) {
           this._private.moveable[xy].progress = this._private.moveable[xy].position / this._private.boundaries[xy].end;
-        } else {
+        }
+        else {
           this._private.moveable[xy].progress = 1;
         }
       }
@@ -476,7 +516,14 @@ export default class ShbScroll {
 
     if (positionHasChanged) {
       if (!this._state.isAbstractMoveable) this._updateMoveableNodePosition();
-      this.dispatchEvent(new Event(events.positionChange), lodash.cloneDeep(this._private.moveable));
+
+      let eventData = {
+        isTouchActive: this._state.isTouchActive,
+        x: Object.assign({}, this._private.moveable.x),
+        y: Object.assign({}, this._private.moveable.y)
+      };
+
+      this.dispatchEvent(new Event(events.positionChange), eventData);
     }
   }
 
